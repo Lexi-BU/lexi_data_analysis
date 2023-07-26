@@ -26,7 +26,7 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 ```
 
-See the '''[pyproject.toml]()''' file for more details.
+See the '''[pyproject.toml](pyproject.toml)''' file for more details.
 
 The repository is archived using Zenodo with the following DOI:
  TODO: Add DOI
