@@ -68,3 +68,8 @@ poetry shell
 This will start the virtual environment.
 
 ### How to run the programme/use the code
+
+
+# Contact
+If you have any questions, please contact [Ramiz A. Qudsi](https://www.qudsiramiz.space/) at
+qudsiramiz@gmail.com
