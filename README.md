@@ -29,7 +29,8 @@ build-backend = "poetry.core.masonry.api"
 See the [pyproject.toml](pyproject.toml) file for more details.
 
 The repository is archived using Zenodo with the following DOI:
- TODO: Add DOI
+[![DOI](https://zenodo.org/badge/671162623.svg)](https://zenodo.org/badge/latestdoi/671162623)
+
 
 The repository is structured as follows:
 ```
