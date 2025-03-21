@@ -350,38 +350,38 @@ df_lexi = pd.read_csv("../data/lexi_look_direction_data.csv")
 df_lexi["Epoch"] = pd.to_datetime(df_lexi["Epoch"])
 df_lexi = df_lexi.set_index("Epoch")
 
-start_date = 10
+start_date = 3
 start_hour = 0
 end_hour = 24
 if __name__ == "__main__":
     for month in range(3, 4):
-        for day in range(start_date, start_date + 1):
-            for hour in range(start_hour, end_hour):
-                try:
-                    start_time = f"2025-{month:02d}-{day:02d}T{hour:02d}:00:00Z"
-                    end_time = f"2025-{month:02d}-{day:02d}T{hour:02d}:59:59Z"
-                    input_data = {
-                        "data_folder_location": "/mnt/cephadrius/bu_research/lexi_data/L1b/sci/cdf/",
-                        "start_time": start_time,
-                        "end_time": end_time,
-                    }
-                    df = read_all_data_files(kwargs=input_data)
+        for day in range(start_date, start_date + 13):
+            # for hour in range(start_hour, end_hour):
+            try:
+                start_time = f"2025-{month:02d}-{day:02d}T00:00:00Z"
+                end_time = f"2025-{month:02d}-{day:02d}T23:59:59Z"
+                input_data = {
+                    "data_folder_location": "/mnt/cephadrius/bu_research/lexi_data/L1b/sci/cdf/",
+                    "start_time": start_time,
+                    "end_time": end_time,
+                }
+                df = read_all_data_files(kwargs=input_data)
 
-                    plot_histogram_diff(
-                        df=df,
-                        df_lexi=df_lexi,
-                        start_time=input_data["start_time"],
-                        end_time=input_data["end_time"],
-                        delta_time="600",
-                        bins=100,
-                        mincnt=10,
-                        x_key="x_volt_lin",
-                        y_key="y_volt_lin",
-                        extent=[-0.1, 0.1, -0.1, 0.1],
-                        norm_style="linear",
-                        save_folder=f"../figures/diff_histograms/{start_date:02d}-{month:02d}",
-                        save_figures=True,
-                    )
-                except Exception as e:
-                    print(f"Error processing: {e}")
-                    pass
+                plot_histogram_diff(
+                    df=df,
+                    df_lexi=df_lexi,
+                    start_time=input_data["start_time"],
+                    end_time=input_data["end_time"],
+                    delta_time="60",
+                    bins=100,
+                    mincnt=10,
+                    x_key="x_volt_lin",
+                    y_key="y_volt_lin",
+                    extent=[-0.1, 0.1, -0.1, 0.1],
+                    norm_style="linear",
+                    save_folder=f"../figures/diff_histograms/1_min/{start_date:02d}-{month:02d}",
+                    save_figures=True,
+                )
+            except Exception as e:
+                print(f"Error processing: {e}")
+                pass
