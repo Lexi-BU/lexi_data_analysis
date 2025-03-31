@@ -127,6 +127,7 @@ def plot_histogram_diff(
     y_key=None,
     extent=None,
     norm_style="log",
+    time_normalization=False,
     mincnt=None,
     save_folder=None,
     save_figures=False,
@@ -148,7 +149,10 @@ def plot_histogram_diff(
         delta_time = datetime.timedelta(seconds=float(delta_time))
 
     if mincnt is None:
-        mincnt = 1
+        if time_normalization:
+            mincnt = 0
+        else:
+            mincnt = 1
     else:
         mincnt = mincnt
     if norm_style == "log":
@@ -184,6 +188,10 @@ def plot_histogram_diff(
                     x_right, y_right, bins=bins, range=[extent[0:2], extent[2:]]
                 )
 
+                # If time normalization is enabled, normalize the histograms by the time range
+                if time_normalization:
+                    hist_left = hist_left / delta_time.total_seconds()
+                    hist_right = hist_right / delta_time.total_seconds()
                 hist_center = hist_right - hist_left
 
                 # Normalize the hist_center so that the maximum value is 1
@@ -350,16 +358,17 @@ df_lexi = pd.read_csv("../data/lexi_look_direction_data.csv")
 df_lexi["Epoch"] = pd.to_datetime(df_lexi["Epoch"])
 df_lexi = df_lexi.set_index("Epoch")
 
-start_date = 3
-start_hour = 0
-end_hour = 24
+"""
+start_date = 6
+start_hour = 12
+end_hour = 18
 if __name__ == "__main__":
     for month in range(3, 4):
         for day in range(start_date, start_date + 13):
             # for hour in range(start_hour, end_hour):
             try:
-                start_time = f"2025-{month:02d}-{day:02d}T00:00:00Z"
-                end_time = f"2025-{month:02d}-{day:02d}T23:59:59Z"
+                start_time = f"2025-{month:02d}-{day:02d}T14:00:00Z"
+                end_time = f"2025-{month:02d}-{day:02d}T18:59:59Z"
                 input_data = {
                     "data_folder_location": "/mnt/cephadrius/bu_research/lexi_data/L1b/sci/cdf/",
                     "start_time": start_time,
@@ -385,3 +394,29 @@ if __name__ == "__main__":
             except Exception as e:
                 print(f"Error processing: {e}")
                 pass
+"""
+
+start_time = f"2025-03-06T14:42:00Z"
+end_time = f"2025-03-06T15:14:00Z"
+input_data = {
+    "data_folder_location": "/mnt/cephadrius/bu_research/lexi_data/L1b/sci/cdf/",
+    "start_time": start_time,
+    "end_time": end_time,
+}
+df = read_all_data_files(kwargs=input_data)
+
+plot_histogram_diff(
+    df=df,
+    df_lexi=df_lexi,
+    start_time=input_data["start_time"],
+    end_time=input_data["end_time"],
+    delta_time="960",
+    bins=100,
+    mincnt=10,
+    x_key="x_volt_lin",
+    y_key="y_volt_lin",
+    extent=[-0.1, 0.1, -0.1, 0.1],
+    norm_style="linear",
+    save_folder=f"../figures/diff_histograms/16_min/{start_time}-{end_time}",
+    save_figures=True,
+)
