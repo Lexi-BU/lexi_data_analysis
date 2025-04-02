@@ -85,8 +85,8 @@ merged_file_name = (
 # Read the merged data from the pickle file
 merged_df = pd.read_pickle(merged_file_name)
 
-plot_start_time_start = "2025-03-06T00:00:00Z"
-plot_end_time_start = "2025-03-07T23:59:00Z"
+plot_start_time_start = "2025-03-16T19:00:00Z"
+plot_end_time_start = "2025-03-16T21:59:00Z"
 
 # Convert to datetime objects
 start_time = datetime.datetime.strptime(plot_start_time_start, "%Y-%m-%dT%H:%M:%SZ")
@@ -206,7 +206,7 @@ for plot_start_time, plot_end_time in zip(plot_start_time_list, plot_end_time_li
     twin_ax_1.spines["right"].set_color("r")
     # ax[0].tick_params(axis="y", colors="w")
     twin_ax_1.tick_params(axis="y", colors="r")
-    twin_ax_1.set_ylim(2800, 3200)
+    # twin_ax_1.set_ylim(100, 3200)
 
     # twin_ax.legend()
     # Plot the look direction data on the second axis

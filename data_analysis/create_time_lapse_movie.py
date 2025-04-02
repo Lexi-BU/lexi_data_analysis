@@ -3,16 +3,17 @@ from datetime import datetime
 from pathlib import Path
 
 from moviepy import ImageSequenceClip
+from PIL import Image
 
 # Define the folder containing the PNG images
-image_folder = "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_pipeline/figures/1_min/"
+image_folder = "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/figures/histogram_diff/"
 
 # Define the start and end times
 start_time = "2025-03-06_00-00-00"
 end_time = "2025-03-10_00-00-00"
 
 # Define the frame rate (frames per second)
-frame_rate = 10
+frame_rate = 2
 
 # Convert the start and end times to datetime objects for comparison
 start_time_dt = datetime.strptime(start_time, "%Y-%m-%d_%H-%M-%S")
@@ -23,8 +24,8 @@ end_time_dt = datetime.strptime(end_time, "%Y-%m-%d_%H-%M-%S")
 def extract_timestamp(filename):
     # Assuming the filename format is x_cm_vs_y_cm_2D_histogram_2025-03-03_00-20-00_2025-03-03_00-29-59.png
     parts = filename.split("_")
-    timestamp_str = f"{parts[7]}_{parts[8]}"
-    return datetime.strptime(timestamp_str, "%Y-%m-%d_%H-%M-%S")
+    timestamp_str = f"{parts[7]}_{parts[8][:5]}"
+    return datetime.strptime(timestamp_str, "%Y-%m-%d_%H-%M")
 
 
 # Filter the images based on the start and end times
@@ -33,7 +34,25 @@ for filename in sorted(os.listdir(image_folder)):
     if filename.endswith(".png"):
         timestamp = extract_timestamp(filename)
         if start_time_dt <= timestamp <= end_time_dt:
-            images.append(os.path.join(image_folder, filename))
+            img_path = os.path.join(image_folder, filename)
+
+            # Open and resize the image
+            with Image.open(img_path) as img:
+                # Choose one of these resizing methods:
+
+                # METHOD 1: Resize to smallest dimensions found
+                if not images:  # First image sets the target size
+                    base_width, base_height = img.size
+                resized_img = img.resize((base_width, base_height))
+
+                # METHOD 2: Resize to fixed dimensions (uncomment to use)
+                # resized_img = img.resize((1920, 1080))  # 1080p
+
+                # Save temp resized image
+                temp_path = f"/tmp/resized_{filename}"
+                resized_img.save(temp_path)
+                images.append(temp_path)
+
 
 # Create the video clip
 clip = ImageSequenceClip(images, fps=frame_rate)
@@ -47,5 +66,9 @@ output_file_gif = f"output_video_{start_time}_{end_time}_{frame_rate}.gif"
 
 clip.write_videofile(output_folder / output_file, codec="libx264")
 # clip.write_gif(output_folder / output_file_gif, fps=frame_rate)
+
+# Cleanup temp files
+for temp_img in images:
+    os.remove(temp_img)
 
 print(f"Video saved as {output_file}")

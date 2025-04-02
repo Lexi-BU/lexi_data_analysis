@@ -14,14 +14,14 @@ from matplotlib.ticker import FormatStrFormatter
 from spacepy.pycdf import CDF as cdf
 
 # Suppress user warnings from matplotlib
-warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
+warnings.simplefilter("ignore", UserWarning)
 
 
 def get_file_list(data_folder_location, start_time, end_time):
     """Get a list of CDF files within the specified time range."""
 
-    start_time = parser.parse(start_time)
-    end_time = parser.parse(end_time)
+    start_time = parser.parse(start_time) if isinstance(start_time, str) else start_time
+    end_time = parser.parse(end_time) if isinstance(end_time, str) else end_time
     # Construct the folder path
     folder_name = data_folder_location  # + start_time.strftime("%Y-%m-%d")
 
@@ -190,6 +190,7 @@ def get_histogram_arrays(
         bins=bins,
         range=[bin_range[0:2], bin_range[2:4]],
     )
+    hist_left /= delta_time_left
 
     if delta_time_right is None:
         delta_time_right = (end_time_right - start_time_right).total_seconds()
@@ -209,7 +210,6 @@ def get_histogram_arrays(
             range=[bin_range[0:2], bin_range[2:4]],
         )
 
-        hist_left /= delta_time_left
         hist_right /= delta_time_right
 
         # Get the difference between the two histograms
@@ -277,6 +277,66 @@ def get_histogram_arrays(
     #     start_time_right,
     #     end_time_right,
     # )
+
+
+def get_single_histogram_array(
+    df=None,
+    x_key=None,
+    y_key=None,
+    start_time=None,
+    end_time=None,
+    bins=None,
+    bin_range=None,
+    time_normalization=True,
+    mincnt=1,
+):
+    """Get a single histogram array from a dataframe."""
+
+    # Parse the start and end times
+    start_time = parser.parse(start_time) if isinstance(start_time, str) else start_time
+    end_time = parser.parse(end_time) if isinstance(end_time, str) else end_time
+
+    if df is None:
+        df = read_all_data_files(
+            file_list=None,
+            start_time=start_time,
+            end_time=end_time,
+            return_data_type="dataframe",
+            kwargs={
+                "data_folder_location": "/mnt/cephadrius/bu_research/lexi_data/L1b/sci/cdf/",
+                "start_time": start_time,
+                "end_time": end_time,
+            },
+        )
+    if df is None or df.empty:
+        raise ValueError("No data found in the specified time range.")
+
+    # Select the data for the specified time range
+    x_data = df.loc[start_time:end_time, x_key].values
+    y_data = df.loc[start_time:end_time, y_key].values
+
+    # Get the histogram array
+    hist, xedges, yedges = np.histogram2d(
+        x_data,
+        y_data,
+        bins=bins,
+        range=[bin_range[0:2], bin_range[2:4]],
+    )
+
+    if time_normalization:
+        delta_time = (end_time - start_time).total_seconds()
+        hist /= delta_time
+
+    # Get the pointing location
+    pointing_file_name = (
+        "../data/merged_lexi_hk_look_direction_data_2025-01-16_00-00-00_to_2025-03-17_00-00-00.pkl"
+    )
+    df_pointing = pd.read_pickle(pointing_file_name)
+    df_pointing = df_pointing.loc[start_time:end_time]
+    ra_median = df_pointing["ra_lexi"].median()
+    dec_median = df_pointing["dec_lexi"].median()
+
+    return hist, xedges, yedges, ra_median, dec_median
 
 
 def plot_histograms(
@@ -383,13 +443,13 @@ def plot_histograms(
     end_time_left = parser.parse(end_time_left) if isinstance(end_time_left, str) else end_time_left
     """Plot the histograms and save the plot."""
     # Set the font size
-    plt.rcParams.update({"font.size": 18})
+    plt.rcParams.update({"font.size": 16})
     # Use the black background style
     plt.style.use("dark_background")
 
     # Create a figure with subplots
-    fig, axs = plt.subplots(2, 2, figsize=(16, 16), sharex=True)
-    plt.subplots_adjust(hspace=0.15, wspace=0.0)
+    fig, axs = plt.subplots(2, 2, figsize=(18, 18), sharex=False, sharey=False)
+    plt.subplots_adjust(hspace=0.15, wspace=0.05)
 
     # Plot the left histogram
     im_left = axs[0][0].imshow(
@@ -491,20 +551,60 @@ def plot_histograms(
     cbar_center = fig.colorbar(
         im_center,
         ax=axs[1][0],
-        orientation="vertical",
+        orientation="horizontal",
         pad=0.1,
         aspect=70,
         fraction=0.02,
-        location="right",
+        location="top",
         shrink=0.8,
     )
     cbar_center.set_label("Cts/s")
     cbar_center.ax.tick_params(labelsize=10)
-    cbar_center.ax.set_yticklabels(cbar_center.get_ticks(), fontsize=10)
-    cbar_center.ax.set_yticks(cbar_center.get_ticks())
-    cbar_center.ax.yaxis.set_major_formatter(FormatStrFormatter("%.4g"))
-    # Leave the bottom right plot empty
-    axs[1][1].axis("off")
+    cbar_center.ax.set_xticklabels(cbar_center.get_ticks(), fontsize=10, rotation=45)
+    cbar_center.ax.set_xticks(cbar_center.get_ticks())
+    cbar_center.ax.xaxis.set_major_formatter(FormatStrFormatter("%.3f"))
+    # Rotate the colorbar ticks for better readability
+    # cbar_center.ax.tick_params(axis="x", rotation=45)
+    pointing_file_name = (
+        "../data/merged_lexi_hk_look_direction_data_2025-01-16_00-00-00_to_2025-03-17_00-00-00.pkl"
+    )
+    df_pointing = pd.read_pickle(pointing_file_name)
+    df_pointing_right = df_pointing.loc[
+        start_time_right:end_time_right
+    ]  # For the right histogram time range
+    # Make the RA and Dec plot for the right histogram time range
+    axs[1, 1].scatter(
+        df_pointing_right.index,
+        df_pointing_right["dec_lexi"],
+        color="c",
+        s=1,
+        alpha=1,
+    )
+    twin_ax = axs[1, 1].twinx()  # Create a twin axis for RA
+    twin_ax.scatter(
+        df_pointing_right.index,
+        df_pointing_right["ra_lexi"],
+        color="m",
+        s=1,
+        alpha=1,
+    )
+    axs[1, 1].set_title(
+        f"Look Direction \n {start_time_right.strftime('%H:%M:%S')} to {end_time_right.strftime('%H:%M:%S')}"
+    )
+    axs[1, 1].set_xlabel("Time")
+    axs[1, 1].set_ylabel("Dec", color="c")
+    twin_ax.set_ylabel("RA", color="m")
+
+    # Set the grid for the pointing plot
+    axs[1, 1].grid(color="c", linestyle="--", linewidth=0.5, alpha=0.5)
+
+    # Set the spine color to match the line color
+    twin_ax.spines["left"].set_color("c")  # Dec
+    twin_ax.spines["right"].set_color("m")  # RA
+    axs[1, 1].tick_params(axis="y", colors="c")  # Dec
+    twin_ax.tick_params(axis="y", colors="m")  # RA
+
+    # axs[1][1].axis("off")
     # Set the title
     fig.suptitle(
         f"Histogram of {x_key} and {y_key} \n from {start_time_left.strftime('%Y-%m-%d %H:%M:%S')} to {end_time_left.strftime('%Y-%m-%d %H:%M:%S')} and {start_time_right.strftime('%Y-%m-%d %H:%M:%S')} to {end_time_right.strftime('%Y-%m-%d %H:%M:%S')}",
@@ -549,6 +649,17 @@ def plot_histograms(
     axs[0, 0].grid(True, color="c", alpha=0.2)
     axs[1, 0].grid(True, color="k", alpha=0.2)
     axs[0, 1].grid(True, color="c", alpha=0.2)
+    axs[1, 1].grid(True, color="c", alpha=0.2)
+
+    # Rotate the x-axis labels for the bottom plots to be more readable
+    axs[1, 1].set_xticklabels(
+        [label if i % 2 == 0 else "" for i, label in enumerate(axs[1, 1].get_xticklabels())],
+        rotation=45,
+        ha="right",
+    )  # Rotate every other label to avoid overlap
+    axs[1, 1].tick_params(axis="x", which="major", labelsize=10)
+    axs[1, 1].tick_params(axis="x", which="minor", labelsize=10)
+    axs[1, 1].tick_params(axis="y", which="major", labelsize=10, labelleft=True)
 
     # Save the plot
     if save_plot:
