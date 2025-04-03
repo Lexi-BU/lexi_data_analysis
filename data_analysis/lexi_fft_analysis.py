@@ -13,14 +13,14 @@ importlib.reload(lexi_functions)
 input_dict = {
     "x_key": "x_volt_lin",
     "y_key": "y_volt_lin",
-    "start_time": "2025-03-16T19:45:00Z",
-    "end_time": "2025-03-16T21:15:00Z",
+    "start_time": "2025-03-06T15:15:00Z",
+    "end_time": "2025-03-06T15:45:00Z",
     "bins": 200,
     "bin_range": [-0.1, 0.1, -0.1, 0.1],
     "time_normalization": True,
 }
 
-read_data = True
+read_data = False
 if read_data:
     hist, xedges, yedges, ra_median, dec_median = lexi_functions.get_single_histogram_array(
         **input_dict
@@ -45,8 +45,15 @@ filtered_high_fft_hist = np.where(magnitude_spectrum < high_threshold, fft_hist_
 # Inverse FFT to get the filtered histogram back
 filtered_high_hist = np.fft.ifft2(np.fft.ifftshift(filtered_high_fft_hist)).real
 
-higher_threshold = 0.01 * np.max(magnitude_spectrum)
-filtered_higher_fft_hist = np.where(magnitude_spectrum < higher_threshold, fft_hist_shifted, 0)
+higher_threshold = 0.60 * np.max(magnitude_spectrum)
+lower_threshold = 0.55 * np.max(magnitude_spectrum)
+# Get the filtedred histogram between the lower and higher thresholds]
+filtered_higher_fft_hist = np.where(
+    (magnitude_spectrum > lower_threshold) & (magnitude_spectrum < higher_threshold),
+    fft_hist_shifted,
+    0,
+)
+# filtered_higher_fft_hist = np.where(magnitude_spectrum < higher_threshold, fft_hist_shifted, 0)
 # Inverse FFT to get the filtered histogram back for higher threshold
 filtered_higher_hist = np.fft.ifft2(np.fft.ifftshift(filtered_higher_fft_hist)).real
 
@@ -174,46 +181,47 @@ cbar = fig.colorbar(
 cbar.set_label("Cts/s", rotation=270, labelpad=15)
 
 # Filtered Histogram (Higher Frequencies)
-# axs[2, 1].imshow(
-#     filtered_higher_hist.T,
-#     origin="lower",
-#     extent=input_dict["bin_range"],
-#     cmap="inferno",
-#     norm=mpl.colors.Normalize(),
-# )
-# axs[2, 1].set_title(
-#     f"Filtered Histogram (Higher Frequencies) ({higher_threshold:0.2f})", fontsize=title_fontsize
-# )
-# axs[2, 1].set_xlabel(input_dict["x_key"])
-# axs[2, 1].set_ylabel(input_dict["y_key"])
-# # Add colorbar for the filtered higher frequencies histogram
-# cbar = fig.colorbar(
-#     axs[2, 1].images[0],
-#     ax=axs[2, 1],
-#     orientation="vertical",
-#     pad=0.02,
-#     aspect=70,
-#     fraction=0.02,
-#     shrink=0.7,
-# )
-# cbar.set_label("Cts/s", rotation=270, labelpad=15)
+axs[2, 1].imshow(
+    filtered_higher_hist.T,
+    origin="lower",
+    extent=input_dict["bin_range"],
+    cmap="inferno",
+    norm=mpl.colors.Normalize(),
+)
+axs[2, 1].set_title(
+    f"Filtered Histogram between {lower_threshold:.2f} and {higher_threshold:.2f} of FFT Magnitude",
+    fontsize=title_fontsize,
+)
+axs[2, 1].set_xlabel(input_dict["x_key"])
+axs[2, 1].set_ylabel(input_dict["y_key"])
+# Add colorbar for the filtered higher frequencies histogram
+cbar = fig.colorbar(
+    axs[2, 1].images[0],
+    ax=axs[2, 1],
+    orientation="vertical",
+    pad=0.02,
+    aspect=70,
+    fraction=0.02,
+    shrink=0.7,
+)
+cbar.set_label("Cts/s", rotation=270, labelpad=15)
 
 # In the axs[2, 1] position, print the ra and dec median values
-axs[2, 1].axis("off")  # Hide the empty subplot
-axs[2, 1].text(
-    0.5,
-    0.5,
-    f"LEXI look direction values:\n\nRA: {ra_median:.4f}°\nDec: {dec_median:.4f}°"
-    + f"\n\nPotentially looking at:\n\n"
-    # + "Magenetopause",
-    + "Blank sky (after sunset)",
-    horizontalalignment="center",
-    verticalalignment="center",
-    fontsize=title_fontsize,
-    color="w",
-    transform=axs[2, 1].transAxes,
-    bbox=dict(facecolor="black", alpha=0.5, edgecolor="none", boxstyle="round,pad=0.5"),
-)
+# axs[2, 1].axis("off")  # Hide the empty subplot
+# axs[2, 1].text(
+#     0.5,
+#     0.5,
+#     f"LEXI look direction values:\n\nRA: {ra_median:.4f}°\nDec: {dec_median:.4f}°"
+#     + f"\n\nPotentially looking at:\n\n"
+#     # + "Magenetopause",
+#     + "Blank sky (after sunset)",
+#     horizontalalignment="center",
+#     verticalalignment="center",
+#     fontsize=title_fontsize,
+#     color="w",
+#     transform=axs[2, 1].transAxes,
+#     bbox=dict(facecolor="black", alpha=0.5, edgecolor="none", boxstyle="round,pad=0.5"),
+# )
 
 # Set the overall title font size
 # Add the overall title for the figure

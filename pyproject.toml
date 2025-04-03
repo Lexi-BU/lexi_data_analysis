@@ -13,6 +13,7 @@ spacepy = "^0.4.1"
 opencv-python = "^4.11.0.86"
 pyspedas = "^1.7.15"
 moviepy = "^2.1.2"
+plotly = "^6.0.1"
 
 [tool.poetry.dev-dependencies]
 
