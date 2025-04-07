@@ -31,7 +31,9 @@ def extract_timestamp(filename):
 
 # Filter the images based on the start and end times
 images = []
-image_list = sorted(glob.glob(image_folder + "linear_*.png"))
+image_list = sorted(
+    glob.glob(image_folder + "20250407_sunset_double_linear_line_profile_theta_*.png")
+)
 for img_path in image_list:
     image_folder = Path(image_folder).expanduser().resolve()
     filename = os.path.basename(img_path)
