@@ -74,7 +74,7 @@ output_folder = Path(output_folder).expanduser().resolve()
 output_folder.mkdir(parents=True, exist_ok=True)
 # output_file = f"output_video_{start_time}_{end_time}.mp4"
 # output_file_gif = f"output_video_{start_time}_{end_time}_{frame_rate}.gif"
-output_file = f"linear_line_profiles_{start_time.replace(':', '-')}_to_{end_time.replace(':', '-')}_offset_0_v2.mp4"
+output_file = f"20250407_linear_double_line_profiles_{start_time.replace(':', '-')}_to_{end_time.replace(':', '-')}_offset_0_v2.mp4"
 # output_file_gif = (
 #     f"line_profiles_{start_time.replace(':', '-')}_to_{end_time.replace(':', '-')}_{frame_rate}.gif"
 # )
