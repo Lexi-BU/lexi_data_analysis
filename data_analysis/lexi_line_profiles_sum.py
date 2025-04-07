@@ -1,4 +1,5 @@
 import importlib
+import pickle
 import warnings
 from pathlib import Path
 
@@ -42,8 +43,8 @@ def get_line_profile(hist, xedges, yedges, theta, x_offset, y_offset):
     # Calculate distance from each point to the line
     # Line equation: (y - y0) = tan(theta) * (x - x0)
     if theta == 90:  # Vertical line (avoid division by zero)
-        distances = X - x_offset
-        mask = np.isclose(X, x_offset, atol=(xedges[1] - xedges[0]) / 2)
+        distances = Y - y_offset
+        mask = np.isclose(Y, y_offset, atol=(xedges[1] - xedges[0]) / 2)
     else:
         slope = np.tan(theta_rad)
         # Distance along line direction (parametric form)
@@ -275,6 +276,40 @@ for theta in theta_list:
     # Generate the line profile and plot it
     theta, sum_values1 = plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset)
     sum_values.append(sum_values1)
+
+
+# Save, theta, sum_values, x_offset, y_offset, hist, xedges, yedges, ra_median, dec_median to a
+# pickle file
+save_folder = Path("../data/")
+save_folder.mkdir(parents=True, exist_ok=True)
+save_file = save_folder / "line_profile_data.pkl"
+with open(save_file, "wb") as f:
+    pickle.dump(
+        {
+            "theta_list": theta_list,
+            "sum_values": sum_values,
+            "x_offset": x_offset,
+            "y_offset": y_offset,
+            "hist": hist,
+            "xedges": xedges,
+            "yedges": yedges,
+            "ra_median": ra_median,
+            "dec_median": dec_median,
+        },
+        f,
+    )
+# Load the data from the pickle file
+# with open(save_file, "rb") as f:
+#     data = pickle.load(f)
+#     theta_list = data["theta_list"]
+#     sum_values = data["sum_values"]
+#     x_offset = data["x_offset"]
+#     y_offset = data["y_offset"]
+#     hist = data["hist"]
+#     xedges = data["xedges"]
+#     yedges = data["yedges"]
+#     ra_median = data["ra_median"]
+#     dec_median = data["dec_median"]
 
 
 plt.style.use("dark_background")
