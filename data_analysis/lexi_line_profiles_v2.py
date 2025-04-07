@@ -87,6 +87,9 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset):
     ax1.set_ylabel("Y")
     ax1.set_title("2D Histogram with Line")
 
+    ax1.set_xlim(-0.1, 0.1)
+    ax1.set_ylim(-0.1, 0.1)
+
     # Get primary line profile and its perpendicular slope
     dist1, values1 = get_line_profile(hist, xedges, yedges, theta, x_offset, y_offset)
 
@@ -257,8 +260,8 @@ theta_list = np.linspace(0, 180, num=180, endpoint=False)
 max_index = np.unravel_index(np.argmax(hist, axis=None), hist.shape)
 # x_offset = (xedges[max_index[0]] + xedges[max_index[0] + 1]) / 2
 # y_offset = (yedges[max_index[1]] + yedges[max_index[1] + 1]) / 2
-x_offset = -0.1  # X coordinate of the point the line must pass through
-y_offset = -0.1  # Y coordinate of the point the line must pass through
+x_offset = 0.0  # X coordinate of the point the line must pass through
+y_offset = 0.0  # Y coordinate of the point the line must pass through
 for theta in theta_list:
     print(f"Processing line profile for theta = {theta:0.2f} degrees", end="\r")
     # Ensure the histogram is loaded
