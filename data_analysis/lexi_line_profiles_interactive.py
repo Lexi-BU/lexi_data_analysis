@@ -113,11 +113,51 @@ save_folder = Path("../figures/html/")
 save_folder.mkdir(parents=True, exist_ok=True)
 fig_name = f"20250407_sunset_double_linear_line_profile_sum_values.html"
 
-# Add custom JavaScript for the interactivity
+# JavaScript to update the line on hover
+custom_js = """
+<script>
+    // Get the Plotly div
+    var plotDiv = document.getElementById('{plot_id}');
+    
+    // Function to update the line
+    function updateLine(theta) {
+        var line_length = 0.2;
+        var x_line = [
+            -line_length * Math.cos(theta * Math.PI / 180),
+            line_length * Math.cos(theta * Math.PI / 180)
+        ];
+        var y_line = [
+            -line_length * Math.sin(theta * Math.PI / 180),
+            line_length * Math.sin(theta * Math.PI / 180)
+        ];
+        
+        // Update the line (3rd trace)
+        Plotly.restyle(
+            plotDiv,
+            {
+                'x': [x_line],
+                'y': [y_line]
+            },
+            [2]  // Index of the line trace
+        );
+    }
+    
+    // On hover over the right plot (2nd trace), update the line
+    plotDiv.on('plotly_hover', function(data) {
+        if (data.points[0].curveNumber === 1) {  // Check if hovering the right plot
+            var theta = data.points[0].x;
+            updateLine(theta);
+        }
+    });
+</script>
+"""
+
+# Save the figure with embedded JavaScript
 fig.write_html(
     save_folder / fig_name,
-    config={"scrollZoom": True, "responsive": True},
+    config={"scrollZoom": True},
     include_plotlyjs="cdn",
     full_html=True,
     auto_open=False,
+    post_script=custom_js,  # <-- JavaScript is added here
 )
