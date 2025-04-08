@@ -42,17 +42,32 @@ def get_line_profile(hist, xedges, yedges, theta, x_offset, y_offset):
 
     # Calculate distance from each point to the line
     # Line equation: (y - y0) = tan(theta) * (x - x0)
-    if theta == 90:  # Vertical line (avoid division by zero)
-        distances = Y - y_offset
-        mask = np.isclose(Y, y_offset, atol=(xedges[1] - xedges[0]) / 2)
+    # if theta == 90:  # Vertical line (avoid division by zero)
+    #     distances = Y - y_offset
+    #     print(f"Distances: {distances}")
+    #     mask = np.isclose(X, x_offset, atol=(xedges[1] - xedges[0]) / 2)
+    #     # Print the value of distances where mask is True
+    #     print(f"Mask True Distances: {distances[mask]}")
+    # else:
+    #     slope = np.tan(theta_rad)
+    #     # Distance along line direction (parametric form)
+    #     # Projection of (x-x0, y-y0) onto line direction (cosθ, sinθ)
+    #     distances = (X - x_offset) * np.cos(theta_rad) + (Y - y_offset) * np.sin(theta_rad)
+    #     # Check if point is on the line within tolerance
+    #     mask = np.isclose(Y - y_offset, slope * (X - x_offset), atol=(yedges[1] - yedges[0]) / 2)
+
+    distances = (X - x_offset) * np.cos(theta_rad) + (Y - y_offset) * np.sin(theta_rad)
+
+    # For checking if points are on the line, use a different approach that's stable for all angles
+    if np.isclose(theta, 90, atol=1e-5):  # Vertical line
+        mask = np.isclose(X, x_offset, atol=(xedges[1] - xedges[0]) / 2)
     else:
-        slope = np.tan(theta_rad)
-        # Distance along line direction (parametric form)
-        # Projection of (x-x0, y-y0) onto line direction (cosθ, sinθ)
-        distances = (X - x_offset) * np.cos(theta_rad) + (Y - y_offset) * np.sin(theta_rad)
-        # Check if point is on the line within tolerance
-        mask = np.isclose(Y - y_offset, slope * (X - x_offset), atol=(yedges[1] - yedges[0]) / 2)
-        perpendicular_slope = -1 / slope if slope != 0 else np.inf
+        # Use the line equation in standard form: (y-y0) - tanθ*(x-x0) = 0
+        # But compute it more carefully
+        dx = X - x_offset
+        dy = Y - y_offset
+        expected_dy = np.tan(theta_rad) * dx
+        mask = np.isclose(dy, expected_dy, atol=(yedges[1] - yedges[0]) / 2)
 
     # Get distances and values for points on/near the line
     line_distances = distances[mask]
@@ -64,6 +79,101 @@ def get_line_profile(hist, xedges, yedges, theta, x_offset, y_offset):
     line_values = line_values[sort_idx]
 
     return line_distances, line_values
+
+
+def get_histogram_values_along_line_both_directions(
+    hist, xedges, yedges, theta, x_offset, y_offset, num_points=100
+):
+    """
+    Extract histogram values along a specified line in both directions from the offset point.
+
+    Parameters:
+    - hist: 2D numpy array of histogram values
+    - xedges, yedges: Bin edges for x and y dimensions
+    - theta: Angle of the line (in radians) from x-axis
+    - x_offset, y_offset: Reference point on the line
+    - num_points: Number of points to sample in each direction
+
+    Returns:
+    - values: Histogram values along the line
+    - distances: Signed distances from the reference point (negative = one direction, positive = other direction)
+    """
+    # Get bin centers
+    xcenters = (xedges[:-1] + xedges[1:]) / 2
+    ycenters = (yedges[:-1] + yedges[1:]) / 2
+
+    # Line direction vector
+    dx = np.cos(theta)
+    dy = np.sin(theta)
+
+    # Find intersections with histogram boundaries in both directions
+    def find_intersection_t(x0, y0, dx, dy, x_min, x_max, y_min, y_max):
+        """Find the t values where the line exits the histogram boundaries"""
+        t_values = []
+
+        # For each boundary, solve for t
+        if dx != 0:
+            t_left = (x_min - x0) / dx
+            y = y0 + dy * t_left
+            if y_min <= y <= y_max:
+                t_values.append(t_left)
+
+            t_right = (x_max - x0) / dx
+            y = y0 + dy * t_right
+            if y_min <= y <= y_max:
+                t_values.append(t_right)
+
+        if dy != 0:
+            t_bottom = (y_min - y0) / dy
+            x = x0 + dx * t_bottom
+            if x_min <= x <= x_max:
+                t_values.append(t_bottom)
+
+            t_top = (y_max - y0) / dy
+            x = x0 + dx * t_top
+            if x_min <= x <= x_max:
+                t_values.append(t_top)
+
+        return t_values
+
+    x_min, x_max = xedges[0], xedges[-1]
+    y_min, y_max = yedges[0], yedges[-1]
+
+    # Find t values where line exits the histogram area
+    t_values = find_intersection_t(x_offset, y_offset, dx, dy, x_min, x_max, y_min, y_max)
+
+    if len(t_values) < 2:
+        # Line doesn't intersect the histogram area properly
+        return np.array([]), np.array([])
+
+    # Get the min and max t values (for both directions)
+    t_min = min(t_values)
+    t_max = max(t_values)
+
+    # Sample points in both directions
+    t_samples_neg = np.linspace(t_min, 0, num=num_points // 2, endpoint=False)  # Negative direction
+    t_samples_pos = np.linspace(0, t_max, num=num_points // 2)  # Positive direction
+    t_samples = np.concatenate([t_samples_neg, t_samples_pos])
+
+    # Generate points along the line
+    x_line = x_offset + dx * t_samples
+    y_line = y_offset + dy * t_samples
+
+    # Find which bins these points belong to
+    x_bins = np.digitize(x_line, xedges) - 1
+    y_bins = np.digitize(y_line, yedges) - 1
+
+    # Clip to valid bin ranges
+    valid = (x_bins >= 0) & (x_bins < hist.shape[1]) & (y_bins >= 0) & (y_bins < hist.shape[0])
+    x_bins = x_bins[valid]
+    y_bins = y_bins[valid]
+    t_samples = t_samples[valid]
+
+    # Get the histogram values
+    values = hist[y_bins, x_bins]
+
+    # The t_samples are already signed distances from (x_offset, y_offset)
+    return values, t_samples
 
 
 def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset):
@@ -92,16 +202,19 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset):
     ax1.set_ylim(-0.1, 0.1)
 
     # Get primary line profile and its perpendicular slope
-    dist1, values1 = get_line_profile(hist, xedges, yedges, theta, x_offset, y_offset)
+    values1, dist1 = get_histogram_values_along_line_both_directions(
+        hist, xedges, yedges, theta, x_offset, y_offset
+    )
 
     sum_values1 = np.sum(values1)
+    # print(f"Sum of values along line at θ={theta}°: {sum_values1}")
     # Calculate angle for perpendicular line (add 90 degrees)
-    theta_perp = theta + 90
-    if theta_perp >= 360:
-        theta_perp -= 360
+    # theta_perp = theta + 90
+    # if theta_perp >= 360:
+    #     theta_perp -= 360
 
     # Get perpendicular line profile
-    dist2, values2 = get_line_profile(hist, xedges, yedges, theta_perp, x_offset, y_offset)
+    # dist2, values2 = get_line_profile(hist, xedges, yedges, theta_perp, x_offset, y_offset)
 
     # Plot both lines on the histogram
     def plot_line(ax, theta, color):
@@ -170,25 +283,36 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset):
     # Plot primary line
     plot_line(ax1, theta, "lime")
     # Plot perpendicular line (blue)
-    plot_line(ax1, theta_perp, "cyan")
+    # plot_line(ax1, theta_perp, "cyan")
     # Plot primary line profile (left axis)
     ax2.scatter(dist1, values1, color="lime", marker="o", label=f"θ={theta}°", s=2)
     ax2.set_xlabel("Distance from (x_offset, y_offset) along the line")
     ax2.set_ylabel("Histogram Value", color="lime")
     ax2.tick_params(axis="y", labelcolor="lime")
+
+    # At top left of the plot, display the sum_values1 and the theta
+    ax2.text(
+        0.02,
+        0.98,
+        f"Sum counts: {sum_values1:.3f}\nθ={theta:.1f}°",
+        transform=ax2.transAxes,
+        fontsize=10,
+        verticalalignment="top",
+        bbox=dict(facecolor="k", alpha=0.5, edgecolor="none"),
+    )
     ax2.grid(True)
 
     # Create twin axis for perpendicular line profile
-    ax2b = ax2.twinx()
-    ax2b.scatter(dist2, values2, color="cyan", marker="d", label=f"θ={theta_perp}°", s=2)
-    ax2b.set_ylabel("Histogram Value", color="cyan")
-    ax2b.tick_params(axis="y", labelcolor="cyan")
-    ax2b.set_ylim(0.0, 0.04)
+    # ax2b = ax2.twinx()
+    # ax2b.scatter(dist2, values2, color="cyan", marker="d", label=f"θ={theta_perp}°", s=2)
+    # ax2b.set_ylabel("Histogram Value", color="cyan")
+    # ax2b.tick_params(axis="y", labelcolor="cyan")
+    # ax2b.set_ylim(0.0, 0.04)
 
     # Combine legends
     lines, labels = ax2.get_legend_handles_labels()
-    lines2, labels2 = ax2b.get_legend_handles_labels()
-    ax2.legend(lines + lines2, labels + labels2, loc="upper right")
+    # lines2, labels2 = ax2b.get_legend_handles_labels()
+    # ax2.legend(lines + lines2, labels + labels2, loc="upper right")
 
     ax2.set_title(f"Line Profiles through ({x_offset}, {y_offset})")
 
@@ -220,17 +344,17 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset):
             bottom=True,
         )
     # Set the spine color to match the line color
-    ax2b.spines["left"].set_color("lime")
+    ax2.spines["left"].set_color("lime")
     # Set the tick labels color to match the line color
     ax2.tick_params(axis="y", colors="lime")
-    ax2b.spines["right"].set_color("cyan")
+    # ax2b.spines["right"].set_color("cyan")
     plt.tight_layout()
 
     save_theta = np.round(theta, 1)
     save_theta = str(save_theta).zfill(6)
     save_folder = Path("../figures/line_profiles_v2/")
     save_folder.mkdir(parents=True, exist_ok=True)
-    fig_name = f"20250407_sunset_double_linear_line_profile_theta_{save_theta}_offset_{x_offset:0.3f}_{y_offset:0.3f}.png"
+    fig_name = f"20250408_sunset_double_linear_line_profile_theta_{save_theta}_offset_{x_offset:0.3f}_{y_offset:0.3f}.png"
     fig.savefig(save_folder / fig_name, dpi=300, bbox_inches="tight", pad_inches=0.1)
     # print(f"Line profile plot saved to {save_folder / fig_name}")
 
@@ -256,7 +380,7 @@ if "hist" not in locals() or "xedges" not in locals() or "yedges" not in locals(
     )
 
 
-theta_list = np.linspace(0, 180, num=180, endpoint=False)
+theta_list = np.linspace(110, 180, num=701, endpoint=True)
 
 # Find the maximum value in the histogram and its corresponding coordinates
 max_index = np.unravel_index(np.argmax(hist, axis=None), hist.shape)
@@ -282,7 +406,8 @@ for theta in theta_list:
 # pickle file
 save_folder = Path("../data/")
 save_folder.mkdir(parents=True, exist_ok=True)
-save_file = save_folder / "line_profile_data.pkl"
+file_name = f"line_profile_data_{theta_list[0]}_{theta_list[-1]}_{len(theta_list)}.pkl"
+save_file = save_folder / file_name
 with open(save_file, "wb") as f:
     pickle.dump(
         {

@@ -168,3 +168,5 @@ figures/*
 movies/*
 
 pipeline/ramiz/calib/cxrb_fak1.fits
+
+poetry.lock

@@ -14,7 +14,7 @@ start_time = "2025-03-16_18-00-00"
 end_time = "2025-03-16_22-00-00"
 
 # Define the frame rate (frames per second)
-frame_rate = 2
+frame_rate = 15
 
 # Convert the start and end times to datetime objects for comparison
 # start_time_dt = datetime.strptime(start_time, "%Y-%m-%d_%H-%M-%S")
@@ -32,7 +32,7 @@ def extract_timestamp(filename):
 # Filter the images based on the start and end times
 images = []
 image_list = sorted(
-    glob.glob(image_folder + "20250407_sunset_double_linear_line_profile_theta_*.png")
+    glob.glob(image_folder + "20250408_sunset_double_linear_line_profile_theta_*.png")
 )
 for img_path in image_list:
     image_folder = Path(image_folder).expanduser().resolve()
