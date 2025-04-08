@@ -81,6 +81,9 @@ def get_line_profile(hist, xedges, yedges, theta, x_offset, y_offset):
     return line_distances, line_values
 
 
+# def get_histogram_values_along_line()
+
+
 def get_histogram_values_along_line_both_directions(
     hist, xedges, yedges, theta, x_offset, y_offset, num_points=100
 ):
@@ -201,9 +204,25 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset):
     ax1.set_xlim(-0.1, 0.1)
     ax1.set_ylim(-0.1, 0.1)
 
+    x_centers = (xedges[:-1] + xedges[1:]) / 2
+    y_centers = (yedges[:-1] + yedges[1:]) / 2
+
+    for i in range(len(x_centers)):
+        for j in range(len(y_centers)):
+            value = hist[i, j]
+            if value > 0:  # Only display text for non-zero bins
+                ax1.text(
+                    x_centers[i],
+                    y_centers[j],
+                    f"{value:.1f}",
+                    color="green",
+                    ha="center",
+                    va="center",
+                    fontsize=5,
+                )
     # Get primary line profile and its perpendicular slope
     values1, dist1 = get_histogram_values_along_line_both_directions(
-        hist, xedges, yedges, theta, x_offset, y_offset
+        hist.T, xedges, yedges, theta, x_offset, y_offset
     )
 
     sum_values1 = np.sum(values1)
@@ -300,8 +319,17 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset):
         verticalalignment="top",
         bbox=dict(facecolor="k", alpha=0.5, edgecolor="none"),
     )
-    ax2.grid(True)
+    # ax2.minor_ticks_on(a)
+    ax2.grid(axis="both", which="major", linestyle="-", linewidth=0.5, alpha=0.5)
 
+    ax2.grid(axis="both", which="minor", linestyle=":", linewidth=0.1, alpha=0.5)
+    # Set the number of minor ticks
+    ax2.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(5))
+    ax2.yaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(5))
+
+    # Set the number of major ticks
+    ax2.xaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
+    ax2.yaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
     # Create twin axis for perpendicular line profile
     # ax2b = ax2.twinx()
     # ax2b.scatter(dist2, values2, color="cyan", marker="d", label=f"θ={theta_perp}°", s=2)
@@ -317,7 +345,7 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset):
     ax2.set_title(f"Line Profiles through ({x_offset}, {y_offset})")
 
     ax2.set_xlim(-0.1, 0.1)
-    ax2.set_ylim(0.0, 0.04)
+    ax2.set_ylim(0.0, 30)
     ax2.set_yscale("linear")
     # Set the maximum number of ticks for both axes to avoid clutter
     ax1.xaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
@@ -344,9 +372,9 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset):
             bottom=True,
         )
     # Set the spine color to match the line color
-    ax2.spines["left"].set_color("lime")
+    # ax2.spines["left"].set_color("lime")
     # Set the tick labels color to match the line color
-    ax2.tick_params(axis="y", colors="lime")
+    # ax2.tick_params(axis="y", colors="lime")
     # ax2b.spines["right"].set_color("cyan")
     plt.tight_layout()
 
@@ -354,7 +382,7 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset):
     save_theta = str(save_theta).zfill(6)
     save_folder = Path("../figures/line_profiles_v2/")
     save_folder.mkdir(parents=True, exist_ok=True)
-    fig_name = f"20250408_sunset_double_linear_line_profile_theta_{save_theta}_offset_{x_offset:0.3f}_{y_offset:0.3f}.png"
+    fig_name = f"2025-03-08_010500_scox_line_profile_theta_{save_theta}_offset_{x_offset:0.3f}_{y_offset:0.3f}.png"
     fig.savefig(save_folder / fig_name, dpi=300, bbox_inches="tight", pad_inches=0.1)
     # print(f"Line profile plot saved to {save_folder / fig_name}")
 
@@ -365,22 +393,21 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset):
 input_dict = {
     "x_key": "x_volt_lin",
     "y_key": "y_volt_lin",
-    "start_time": "2025-03-16T19:45:00Z",
-    "end_time": "2025-03-16T20:15:00Z",
-    "bins": 200,
+    "start_time": "2025-03-08T01:05:00Z",
+    "end_time": "2025-03-08T02:35:00Z",
+    "bins": 11,
     "bin_range": [-0.1, 0.1, -0.1, 0.1],
     "time_normalization": True,
 }
 
 
-read_data = True
+read_data = False
 if "hist" not in locals() or "xedges" not in locals() or "yedges" not in locals() or read_data:
     hist, xedges, yedges, ra_median, dec_median = lexi_functions.get_single_histogram_array(
         **input_dict
     )
 
-
-theta_list = np.linspace(110, 180, num=701, endpoint=True)
+theta_list = np.linspace(0, 180, num=2, endpoint=True)
 
 # Find the maximum value in the histogram and its corresponding coordinates
 max_index = np.unravel_index(np.argmax(hist, axis=None), hist.shape)
