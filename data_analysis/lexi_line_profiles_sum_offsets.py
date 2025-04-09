@@ -178,7 +178,27 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
         perp_line_y = y_perp_line[xi, yi]
         # Find the closest point to (x_offset, y_offset)
         closest_dist = np.sqrt((perp_line_x - x_offset) ** 2 + (perp_line_y - y_offset) ** 2)
+
         min_dist = np.min(closest_dist)
+        # Find the index of the closest point
+        closest_index = np.argmin(closest_dist)
+        x_line_closest = perp_line_x[closest_index]
+        y_line_closest = perp_line_y[closest_index]
+        x_sign = np.sign(x_line_closest - x_offset)
+        y_sign = np.sign(y_line_closest - y_offset)
+        closest_sign = 1
+        if x_sign == 0 and y_sign == 0:
+            closest_sign = 1
+        elif x_sign == 0:
+            closest_sign = y_sign
+        elif y_sign == 0:
+            closest_sign = x_sign
+        # Check if both signs are negative
+        elif x_sign < 0 and y_sign < 0:
+            closest_sign = -1
+        else:
+            closest_sign = x_sign * y_sign
+
         dist2_list = []
         values2_list = []
         if min_dist <= 0.1:
@@ -187,7 +207,8 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
                 if abs(dist) <= 0.1:
                     dist2_list.append(dist)
                     values2_list.append(value)
-            dist2.append(min_dist)
+
+            dist2.append(closest_sign * min_dist)
             values2.append(np.sum(values2_list))
 
     # print(f"Perpendicular distances: {dist2} \n")
@@ -371,7 +392,9 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
     end_date_str = end_data.replace(":", "").replace("-", "").replace("T", "_")
     save_folder = Path(f"../figures/line_profiles_v2/{start_date_str}_{end_date_str}/")
     save_folder.mkdir(parents=True, exist_ok=True)
-    fig_name = f"sunset_single_linear_line_profile_theta_{save_theta}_offset_{x_offset:0.3f}_{y_offset:0.3f}.png"
+    # fig_name =
+    # f"sunset_single_linear_line_profile_theta_{save_theta}_offset_{x_offset:0.3f}_{y_offset:0.3f}.png"
+    fig_name = "test.png"
     fig.savefig(save_folder / fig_name, dpi=300, bbox_inches="tight", pad_inches=0.1)
     # print(f"Line profile plot saved to {save_folder / fig_name}")
 
@@ -398,8 +421,8 @@ if "hist" not in locals() or "xedges" not in locals() or "yedges" not in locals(
         **input_dict
     )
 
-theta_list = np.linspace(0, 180, num=181, endpoint=True)
-theta_index = 30
+theta_list = np.linspace(0, 360, num=361, endpoint=True)
+theta_index = 135
 
 # Find the maximum value in the histogram and its corresponding coordinates
 max_index = np.unravel_index(np.argmax(hist, axis=None), hist.shape)
