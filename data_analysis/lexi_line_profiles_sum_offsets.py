@@ -75,7 +75,7 @@ def get_histogram_values_along_line_both_directions(
         y_center = 0.5 * (yedges[yi] + yedges[yi + 1])
         # Find the equation of a line passing through x_center, y_center and perpendicular to the
         # line passing thorugh x_line and y_line
-        perp_line_length = 0.1
+        perp_line_length = 0.2
         x0_offset = x_center - perp_line_length * dy / 2
         y0_offset = y_center + perp_line_length * dx / 2
         x1_offset = x_center + perp_line_length * dy / 2
@@ -129,7 +129,7 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
     # Use the dark background for better visibility
     plt.style.use("dark_background")
     # Create figure with 2 subplots
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 10))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
 
     # Plot 2D histogram
     im = ax1.imshow(
@@ -139,7 +139,7 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
         aspect="auto",
         cmap="inferno",
     )
-    fig.colorbar(im, ax=ax1, label="Counts")
+    fig.colorbar(im, ax=ax1, label="Counts/s", pad=0.01, shrink=0.9, fraction=0.1)
     ax1.set_xlabel("X")
     ax1.set_ylabel("Y")
     ax1.set_title("2D Histogram with Line")
@@ -147,22 +147,22 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
     ax1.set_xlim(-0.1, 0.1)
     ax1.set_ylim(-0.1, 0.1)
 
-    x_centers = (xedges[:-1] + xedges[1:]) / 2
-    y_centers = (yedges[:-1] + yedges[1:]) / 2
+    # x_centers = (xedges[:-1] + xedges[1:]) / 2
+    # y_centers = (yedges[:-1] + yedges[1:]) / 2
 
-    for i in range(len(x_centers)):
-        for j in range(len(y_centers)):
-            value = hist[i, j]
-            if value > 0:  # Only display text for non-zero bins
-                ax1.text(
-                    x_centers[i],
-                    y_centers[j],
-                    f"{value:.1f}",
-                    color="green",
-                    ha="center",
-                    va="center",
-                    fontsize=5,
-                )
+    # for i in range(len(x_centers)):
+    #     for j in range(len(y_centers)):
+    #         value = hist[i, j]
+    #         if value > 0:  # Only display text for non-zero bins
+    #             ax1.text(
+    #                 x_centers[i],
+    #                 y_centers[j],
+    #                 f"{value:.1f}",
+    #                 color="green",
+    #                 ha="center",
+    #                 va="center",
+    #                 fontsize=5,
+    #             )
     # Get primary line profile and its perpendicular slope
     x_line, y_line, dist1, values1, perp_dist, perp_value, x_perp_line, y_perp_line = (
         get_histogram_values_along_line_both_directions(
@@ -184,20 +184,25 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
         closest_index = np.argmin(closest_dist)
         x_line_closest = perp_line_x[closest_index]
         y_line_closest = perp_line_y[closest_index]
-        x_sign = np.sign(x_line_closest - x_offset)
-        y_sign = np.sign(y_line_closest - y_offset)
-        closest_sign = 1
-        if x_sign == 0 and y_sign == 0:
-            closest_sign = 1
-        elif x_sign == 0:
-            closest_sign = y_sign
-        elif y_sign == 0:
-            closest_sign = x_sign
-        # Check if both signs are negative
-        elif x_sign < 0 and y_sign < 0:
-            closest_sign = -1
+        dx = x_line_closest - x_offset
+        dy = y_line_closest - y_offset
+        tolerance_value = 1e-3
+        if theta <= 180:
+            if np.isclose(dy, 0, atol=tolerance_value):
+                if np.isclose(dx, 0, atol=tolerance_value):
+                    closest_sign = 1
+                else:
+                    closest_sign = np.sign(dx)
+            else:
+                closest_sign = np.sign(dy)
         else:
-            closest_sign = x_sign * y_sign
+            if np.isclose(dy, 0, atol=tolerance_value):
+                if np.isclose(dx, 0, atol=tolerance_value):
+                    closest_sign = 1
+                else:
+                    closest_sign = -np.sign(dx)
+            else:
+                closest_sign = -np.sign(dy)
 
         dist2_list = []
         values2_list = []
@@ -209,10 +214,8 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
                     values2_list.append(value)
 
             dist2.append(closest_sign * min_dist)
-            values2.append(np.sum(values2_list))
+            values2.append(np.sum(values2_list) / len(values2_list))
 
-    # print(f"Perpendicular distances: {dist2} \n")
-    # print(f"Perpendicular values: {values2}")
     # Sum values along the primary line profile (where dist1 is between -0.1 and 0.1)
     mask = (np.array(dist1) >= -0.1) & (np.array(dist1) <= 0.1)
     sum_values1 = np.sum(np.array(values1)[mask])
@@ -255,82 +258,87 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
             ax1.plot(
                 x_perp_line[xi, yi],
                 y_perp_line[xi, yi],
-                color="cyan",
+                color="red",
                 linestyle="--",
-                linewidth=1,
+                linewidth=0.5,
+                alpha=0.1,
             )
             # Add the perp_value beside the perpendicular line profile
-            ax1.text(
-                x_perp_line[xi, yi][0],
-                y_perp_line[xi, yi][0],
-                f"{sum(perp_value[xi, yi]):.1f}",
-                color="cyan",
-                fontsize=5,
-                ha="center",
-                va="bottom",
-            )
+            # ax1.text(
+            #     x_perp_line[xi, yi][0],
+            #     y_perp_line[xi, yi][0],
+            #     f"{sum(perp_value[xi, yi]):.1f}",
+            #     color="cyan",
+            #     fontsize=5,
+            #     ha="center",
+            #     va="bottom",
+            # )
 
     # Plot primary line profile (left axis)
-    # print(f"Distance values along the line: {np.array(dist1)[mask]}")
-    # print(f"Histogram values along the line: {np.array(values1)[mask]}")
     ax2.scatter(
         np.array(dist1)[mask],
         np.array(values1)[mask],
         color="lime",
-        marker="o",
+        marker="d",
         label=f"θ={theta}°",
-        s=2,
+        alpha=1,
+        s=5,
     )
-    ax2.scatter(
+    # At each point, write down the hist value beside it
+    # for dist, value in zip(
+    #     np.array(dist1)[mask],
+    #     np.array(values1)[mask],
+    # ):
+    #     ax2.text(
+    #         dist,
+    #         value,
+    #         f"{value:.1f}",
+    #         color="lime",
+    #         fontsize=5,
+    #         ha="left",
+    #         va="bottom",
+    #     )
+    ax2b = ax2.twinx()
+    ax2b.scatter(
         dist2,
         values2,
         color="red",
-        marker="d",
+        marker=".",
         label="Perpendicular Values",
+        alpha=1,
         s=2,
     )
-    # At each point, write down the hist value beside it
-    for dist, value in zip(
-        np.array(dist1)[mask],
-        np.array(values1)[mask],
-    ):
-        ax2.text(
-            dist,
-            value,
-            f"{value:.1f}",
-            color="lime",
-            fontsize=5,
-            ha="left",
-            va="bottom",
-        )
-    for dist, value in zip(dist2, values2):
-        ax2.text(
-            dist,
-            value,
-            f"{value:.1f}",
-            color="red",
-            fontsize=5,
-            ha="left",
-            va="bottom",
-        )
+    # for dist, value in zip(dist2, values2):
+    #     ax2b.text(
+    #         dist,
+    #         value,
+    #         f"{value:.1f}",
+    #         color="red",
+    #         fontsize=5,
+    #         ha="left",
+    #         va="bottom",
+    #     )
     ax2.set_xlabel("Distance from (x_offset, y_offset) along the line")
     ax2.set_ylabel("Histogram Value", color="lime")
     ax2.tick_params(axis="y", labelcolor="lime")
 
     # At top left of the plot, display the sum_values1 and the theta
-    ax2.text(
-        0.02,
-        0.98,
-        f"Sum counts: {sum_values1:.3f}\nθ={theta:.1f}°",
-        transform=ax2.transAxes,
-        fontsize=10,
-        verticalalignment="top",
-        bbox=dict(facecolor="k", alpha=0.5, edgecolor="none"),
-    )
+    # ax2.text(
+    #     0.02,
+    #     0.98,
+    #     f"Sum counts: {sum_values1:.3f}\nθ={theta:.1f}°",
+    #     transform=ax2.transAxes,
+    #     fontsize=10,
+    #     verticalalignment="top",
+    #     bbox=dict(facecolor="k", alpha=0.5, edgecolor="none"),
+    # )
     # ax2.minor_ticks_on(a)
     ax2.grid(axis="both", which="major", linestyle="-", linewidth=0.5, alpha=0.5)
-
     ax2.grid(axis="both", which="minor", linestyle=":", linewidth=0.1, alpha=0.5)
+    ax2b.grid(axis="both", which="major", linestyle=":", linewidth=0.1, alpha=0.5)
+    ax2b.grid(axis="both", which="minor", linestyle=":", linewidth=0.1, alpha=0.5)
+    ax2b.set_ylabel("Perpendicular Histogram Value", color="red")
+    ax2b.tick_params(axis="y", labelcolor="red")
     # Set the number of minor ticks
     ax2.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(5))
     ax2.yaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(5))
@@ -338,22 +346,15 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
     # Set the number of major ticks
     ax2.xaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
     ax2.yaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
-    # Create twin axis for perpendicular line profile
-    # ax2b = ax2.twinx()
-    # ax2b.scatter(dist2, values2, color="cyan", marker="d", label=f"θ={theta_perp}°", s=2)
-    # ax2b.set_ylabel("Histogram Value", color="cyan")
-    # ax2b.tick_params(axis="y", labelcolor="cyan")
-    # ax2b.set_ylim(0.0, 0.04)
 
     # Combine legends
     lines, labels = ax2.get_legend_handles_labels()
-    # lines2, labels2 = ax2b.get_legend_handles_labels()
-    # ax2.legend(lines + lines2, labels + labels2, loc="upper right")
+    lines2, labels2 = ax2b.get_legend_handles_labels()
+    ax2.legend(lines + lines2, labels + labels2, loc="upper left", fontsize=8)
 
     ax2.set_title(f"Line Profiles through ({x_offset}, {y_offset})")
 
     ax2.set_xlim(-0.1, 0.1)
-    # ax2.set_ylim(0.0, 0.04)
     ax2.set_yscale("linear")
     # Set the maximum number of ticks for both axes to avoid clutter
     ax1.xaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
@@ -375,15 +376,31 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
             colors="w",
             grid_color="c",
             left=True,
-            right=True,
+            right=False,
             top=True,
             bottom=True,
         )
+    ax2b.tick_params(
+        which="both",
+        direction="in",
+        length=6,
+        width=0.5,
+        colors="red",
+        grid_color="c",
+        left=False,
+        right=True,
+        top=True,
+        bottom=True,
+    )
     # Set the spine color to match the line color
-    # ax2.spines["left"].set_color("lime")
+    ax2b.spines["left"].set_color("lime")
+    # Set the tick labels color to match the line color on the left axis, for ax2
+    ax2.tick_params(axis="y", colors="lime")
+
+    # ax2b.spines["bottom"].set_color("lime")
     # Set the tick labels color to match the line color
-    # ax2.tick_params(axis="y", colors="lime")
-    # ax2b.spines["right"].set_color("cyan")
+    # ax2b.tick_params(axis="y", colors="lime")
+    ax2b.spines["right"].set_color("red")
     plt.tight_layout()
 
     save_theta = np.round(theta, 1)
@@ -392,9 +409,11 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
     end_date_str = end_data.replace(":", "").replace("-", "").replace("T", "_")
     save_folder = Path(f"../figures/line_profiles_v2/{start_date_str}_{end_date_str}/")
     save_folder.mkdir(parents=True, exist_ok=True)
-    # fig_name =
-    # f"sunset_single_linear_line_profile_theta_{save_theta}_offset_{x_offset:0.3f}_{y_offset:0.3f}.png"
-    fig_name = "test.png"
+    fig_name = f"sunset_single_linear_line_profile_theta_{save_theta}_offset_{x_offset:0.3f}_{y_offset:0.3f}.png"
+    # if theta >= 180:
+    #     fig_name = "test2.png"
+    # else:
+    #     fig_name = "test.png"
     fig.savefig(save_folder / fig_name, dpi=300, bbox_inches="tight", pad_inches=0.1)
     # print(f"Line profile plot saved to {save_folder / fig_name}")
 
@@ -405,24 +424,24 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
 input_dict = {
     "x_key": "x_volt_lin",
     "y_key": "y_volt_lin",
-    "start_time": "2025-03-16T20:01:00Z",
-    "end_time": "2025-03-16T20:55:00Z",
+    "start_time": "2025-03-16T19:45:00Z",
+    "end_time": "2025-03-16T21:15:00Z",
     # "start_time": "2025-03-06T15:05:00Z",
     # "end_time": "2025-03-06T16:35:00Z",
-    "bins": 10,
+    "bins": 200,
     "bin_range": [-0.1, 0.1, -0.1, 0.1],
     "time_normalization": True,
 }
 
 
-read_data = False
+read_data = True
 if "hist" not in locals() or "xedges" not in locals() or "yedges" not in locals() or read_data:
     hist, xedges, yedges, ra_median, dec_median = lexi_functions.get_single_histogram_array(
         **input_dict
     )
 
-theta_list = np.linspace(0, 360, num=361, endpoint=True)
-theta_index = 135
+theta_list = np.linspace(0, 180, num=181, endpoint=True)
+theta_index = 90
 
 # Find the maximum value in the histogram and its corresponding coordinates
 max_index = np.unravel_index(np.argmax(hist, axis=None), hist.shape)
@@ -436,7 +455,8 @@ y_offset = 0.0  # Y coordinate of the point the line must pass through
 sum_values = []
 start_date = input_dict["start_time"]
 end_date = input_dict["end_time"]
-for theta in theta_list[theta_index : theta_index + 1]:
+# for theta in theta_list[theta_index : theta_index + 1]:
+for theta in theta_list:
     print(f"Processing line profile for theta = {theta:0.2f} degrees", end="\r")
     # Ensure the histogram is loaded
     if "hist" not in locals():
@@ -445,12 +465,12 @@ for theta in theta_list[theta_index : theta_index + 1]:
         )
 
     # Generate the line profile and plot it
-    theta, sum_values1, perps_value, perp_dist = plot_line_profile(
+    theta, sum_values1, perp_sum_value, perp_dist = plot_line_profile(
         hist, xedges, yedges, theta, x_offset, y_offset, start_date, end_date
     )
     sum_values.append(sum_values1)
 
-"""
+
 # Save, theta, sum_values, x_offset, y_offset, hist, xedges, yedges, ra_median, dec_median to a
 # pickle file
 save_folder = Path("../data/")
@@ -462,6 +482,8 @@ with open(save_file, "wb") as f:
         {
             "theta_list": theta_list,
             "sum_values": sum_values,
+            "perp_value": perp_sum_value,
+            "perp_dist": perp_dist,
             "x_offset": x_offset,
             "y_offset": y_offset,
             "hist": hist,
@@ -553,4 +575,3 @@ plt.close(fig)
 # Generate the plot
 # plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset)
 # plt.show()
-"""
