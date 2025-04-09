@@ -355,6 +355,9 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
     ax2.set_title(f"Line Profiles through ({x_offset}, {y_offset})")
 
     ax2.set_xlim(-0.1, 0.1)
+    ax2.set_ylim(0, 0.032)
+
+    ax2b.set_ylim(0, 0.014)
     ax2.set_yscale("linear")
     # Set the maximum number of ticks for both axes to avoid clutter
     ax1.xaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
@@ -434,7 +437,7 @@ input_dict = {
 }
 
 
-read_data = True
+read_data = False
 if "hist" not in locals() or "xedges" not in locals() or "yedges" not in locals() or read_data:
     hist, xedges, yedges, ra_median, dec_median = lexi_functions.get_single_histogram_array(
         **input_dict
@@ -534,7 +537,7 @@ ax2.set_xlabel("Theta (degrees)")
 ax2.set_ylabel("Sum of Histogram Values")
 ax2.set_title("Sum of Histogram Values vs. Theta")
 ax2.set_xlim(0, 180)
-# ax2.set_ylim(0, 0.04)
+# ax2.set_ylim(0, 0.03)
 ax2.set_yscale("linear")
 # Set the maximum number of ticks for both axes to avoid clutter
 ax1.xaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
