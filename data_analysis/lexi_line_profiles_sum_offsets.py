@@ -16,74 +16,6 @@ warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 np.seterr(divide="ignore", invalid="ignore")
 
 
-def get_line_profile(hist, xedges, yedges, theta, x_offset, y_offset):
-    """
-    Extract values from a 2D histogram along a specified line.
-
-    Parameters:
-    - hist: 2D numpy array of histogram values
-    - xedges, yedges: Bin edges for x and y dimensions
-    - theta: Angle in degrees (0 is horizontal, 90 is vertical)
-    - x_offset, y_offset: Point that the line must pass through
-
-    Returns:
-    - distances: Distances from (x_offset, y_offset) along the line
-    - values: Histogram values along the line
-    """
-    # Convert angle to radians
-    theta_rad = np.deg2rad(theta)
-
-    # Calculate centers of bins
-    xcenters = (xedges[:-1] + xedges[1:]) / 2
-    ycenters = (yedges[:-1] + yedges[1:]) / 2
-
-    # Create meshgrid of centers
-    X, Y = np.meshgrid(xcenters, ycenters, indexing="ij")
-
-    # Calculate distance from each point to the line
-    # Line equation: (y - y0) = tan(theta) * (x - x0)
-    # if theta == 90:  # Vertical line (avoid division by zero)
-    #     distances = Y - y_offset
-    #     print(f"Distances: {distances}")
-    #     mask = np.isclose(X, x_offset, atol=(xedges[1] - xedges[0]) / 2)
-    #     # Print the value of distances where mask is True
-    #     print(f"Mask True Distances: {distances[mask]}")
-    # else:
-    #     slope = np.tan(theta_rad)
-    #     # Distance along line direction (parametric form)
-    #     # Projection of (x-x0, y-y0) onto line direction (cosθ, sinθ)
-    #     distances = (X - x_offset) * np.cos(theta_rad) + (Y - y_offset) * np.sin(theta_rad)
-    #     # Check if point is on the line within tolerance
-    #     mask = np.isclose(Y - y_offset, slope * (X - x_offset), atol=(yedges[1] - yedges[0]) / 2)
-
-    distances = (X - x_offset) * np.cos(theta_rad) + (Y - y_offset) * np.sin(theta_rad)
-
-    # For checking if points are on the line, use a different approach that's stable for all angles
-    if np.isclose(theta, 90, atol=1e-5):  # Vertical line
-        mask = np.isclose(X, x_offset, atol=(xedges[1] - xedges[0]) / 2)
-    else:
-        # Use the line equation in standard form: (y-y0) - tanθ*(x-x0) = 0
-        # But compute it more carefully
-        dx = X - x_offset
-        dy = Y - y_offset
-        expected_dy = np.tan(theta_rad) * dx
-        mask = np.isclose(dy, expected_dy, atol=(yedges[1] - yedges[0]) / 2)
-
-    # Get distances and values for points on/near the line
-    line_distances = distances[mask]
-    line_values = hist[mask]
-
-    # Sort by distance
-    sort_idx = np.argsort(line_distances)
-    line_distances = line_distances[sort_idx]
-    line_values = line_values[sort_idx]
-
-    return line_distances, line_values
-
-
-# def get_histogram_values_along_line()
-
-
 def get_histogram_values_along_line_both_directions(
     hist, xedges, yedges, theta, x_offset, y_offset
 ):
@@ -133,10 +65,53 @@ def get_histogram_values_along_line_both_directions(
     # print("Bins and values the line passes through:")
     value = []
     distance = []
+    perp_value = {}
+    perp_distance = {}
+    x_perp_line = {}
+    y_perp_line = {}
     for xi, yi in bin_indices:
         # Compute bin center
         x_center = 0.5 * (xedges[xi] + xedges[xi + 1])
         y_center = 0.5 * (yedges[yi] + yedges[yi + 1])
+        # Find the equation of a line passing through x_center, y_center and perpendicular to the
+        # line passing thorugh x_line and y_line
+        perp_line_length = 0.1
+        x0_offset = x_center - perp_line_length * dy / 2
+        y0_offset = y_center + perp_line_length * dx / 2
+        x1_offset = x_center + perp_line_length * dy / 2
+        y1_offset = y_center - perp_line_length * dx / 2
+        perp_x_offset = x0_offset
+        perp_y_offset = y0_offset
+        perp_num_points = 1000
+        x_line_perp = np.linspace(x0_offset, x1_offset, perp_num_points)
+        y_line_perp = np.linspace(y0_offset, y1_offset, perp_num_points)
+        x_indices_perp = np.searchsorted(xedges, x_line_perp) - 1
+        y_indices_perp = np.searchsorted(yedges, y_line_perp) - 1
+        x_indices_perp = np.clip(x_indices_perp, 0, hist.shape[0] - 1)
+        y_indices_perp = np.clip(y_indices_perp, 0, hist.shape[1] - 1)
+        bin_indices_perp = set(zip(x_indices_perp, y_indices_perp))
+        perp_value_list = []
+        perp_distance_list = []
+        for xi_perp, yi_perp in bin_indices_perp:
+            # Compute bin center
+            x_center_perp = 0.5 * (xedges[xi_perp] + xedges[xi_perp + 1])
+            y_center_perp = 0.5 * (yedges[yi_perp] + yedges[yi_perp + 1])
+            dx_bin_perp = x_center_perp - perp_x_offset
+            dy_bin_perp = y_center_perp - perp_y_offset
+            directed_distance_perp = dx_bin_perp * dx + dy_bin_perp * dy
+            perp_distance_list.append(directed_distance_perp)
+            perp_value_list.append(hist[xi_perp, yi_perp])
+            # print(
+            #     f"Perpendicular Bin: ({x_center_perp:.3f}, {y_center_perp:.3f}), "
+            #     f"Distance: {directed_distance_perp:.3f}, Value: {hist[xi_perp, yi_perp]}"
+            # )
+        # Add the perp values to the dictionary using xi and yi as keys
+        perp_distance[xi, yi] = perp_distance_list
+        perp_value[xi, yi] = perp_value_list
+        x_perp_line[xi, yi] = x_line_perp
+        y_perp_line[xi, yi] = y_line_perp
+
+        # Compute bin center
         dx_bin = x_center - x_offset
         dy_bin = y_center - y_offset
         # Project onto direction vector (theta)
@@ -144,7 +119,7 @@ def get_histogram_values_along_line_both_directions(
         distance.append(directed_distance)
         value.append(hist[xi, yi])
 
-    return x_line, y_line, distance, value
+    return x_line, y_line, distance, value, perp_distance, perp_value, x_perp_line, y_perp_line
 
 
 def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_date, end_data):
@@ -154,7 +129,7 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
     # Use the dark background for better visibility
     plt.style.use("dark_background")
     # Create figure with 2 subplots
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 10))
 
     # Plot 2D histogram
     im = ax1.imshow(
@@ -175,24 +150,48 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
     x_centers = (xedges[:-1] + xedges[1:]) / 2
     y_centers = (yedges[:-1] + yedges[1:]) / 2
 
-    # for i in range(len(x_centers)):
-    #     for j in range(len(y_centers)):
-    #         value = hist[i, j]
-    #         if value > 0:  # Only display text for non-zero bins
-    #             ax1.text(
-    #                 x_centers[i],
-    #                 y_centers[j],
-    #                 f"{value:.1f}",
-    #                 color="green",
-    #                 ha="center",
-    #                 va="center",
-    #                 fontsize=5,
-    #             )
+    for i in range(len(x_centers)):
+        for j in range(len(y_centers)):
+            value = hist[i, j]
+            if value > 0:  # Only display text for non-zero bins
+                ax1.text(
+                    x_centers[i],
+                    y_centers[j],
+                    f"{value:.1f}",
+                    color="green",
+                    ha="center",
+                    va="center",
+                    fontsize=5,
+                )
     # Get primary line profile and its perpendicular slope
-    x_line, y_line, dist1, values1 = get_histogram_values_along_line_both_directions(
-        hist, xedges, yedges, theta, x_offset, y_offset
+    x_line, y_line, dist1, values1, perp_dist, perp_value, x_perp_line, y_perp_line = (
+        get_histogram_values_along_line_both_directions(
+            hist, xedges, yedges, theta, x_offset, y_offset
+        )
     )
 
+    # Find the distances between x_offset, y_offset and each of the x_perp_line and y_perp_line
+    dist2 = []
+    values2 = []
+    for (xi, yi), perp_dist_list in perp_dist.items():
+        perp_line_x = x_perp_line[xi, yi]
+        perp_line_y = y_perp_line[xi, yi]
+        # Find the closest point to (x_offset, y_offset)
+        closest_dist = np.sqrt((perp_line_x - x_offset) ** 2 + (perp_line_y - y_offset) ** 2)
+        min_dist = np.min(closest_dist)
+        dist2_list = []
+        values2_list = []
+        if min_dist <= 0.1:
+            # Select all the values where the distance is within 0.1
+            for dist, value in zip(perp_dist_list, perp_value[xi, yi]):
+                if abs(dist) <= 0.1:
+                    dist2_list.append(dist)
+                    values2_list.append(value)
+            dist2.append(min_dist)
+            values2.append(np.sum(values2_list))
+
+    # print(f"Perpendicular distances: {dist2} \n")
+    # print(f"Perpendicular values: {values2}")
     # Sum values along the primary line profile (where dist1 is between -0.1 and 0.1)
     mask = (np.array(dist1) >= -0.1) & (np.array(dist1) <= 0.1)
     sum_values1 = np.sum(np.array(values1)[mask])
@@ -213,7 +212,46 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
         y_marker_neg = y_offset - 0.1 * dy
         ax1.plot(x_marker_neg, y_marker_neg, "ro", markersize=4)  # Mark the -0.1 point
 
+    # Select perp_dist list and perp_value only if that line is withing 0.1 distance from the
+    # x_offset, y_offset
+    perp_dist_list = []
+    for (xi, yi), perp_dist_list in perp_dist.items():
+        if len(perp_dist_list) > 0:
+            perp_dist_list = [dist for dist in perp_dist_list if abs(dist) <= 0.1]
+            perp_dist[(xi, yi)] = perp_dist_list
+    perp_value_list = []
+    for (xi, yi), perp_value_list in perp_value.items():
+        if len(perp_value_list) > 0:
+            perp_value_list = [
+                value
+                for dist, value in zip(perp_dist[(xi, yi)], perp_value_list)
+                if abs(dist) <= 0.1
+            ]
+            perp_value[(xi, yi)] = perp_value_list
+    # Plot all the perpendicular line profiles
+    for (xi, yi), perp_dist_list in perp_dist.items():
+        if len(perp_dist_list) > 0:
+            ax1.plot(
+                x_perp_line[xi, yi],
+                y_perp_line[xi, yi],
+                color="cyan",
+                linestyle="--",
+                linewidth=1,
+            )
+            # Add the perp_value beside the perpendicular line profile
+            ax1.text(
+                x_perp_line[xi, yi][0],
+                y_perp_line[xi, yi][0],
+                f"{sum(perp_value[xi, yi]):.1f}",
+                color="cyan",
+                fontsize=5,
+                ha="center",
+                va="bottom",
+            )
+
     # Plot primary line profile (left axis)
+    # print(f"Distance values along the line: {np.array(dist1)[mask]}")
+    # print(f"Histogram values along the line: {np.array(values1)[mask]}")
     ax2.scatter(
         np.array(dist1)[mask],
         np.array(values1)[mask],
@@ -222,20 +260,38 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
         label=f"θ={theta}°",
         s=2,
     )
+    ax2.scatter(
+        dist2,
+        values2,
+        color="red",
+        marker="d",
+        label="Perpendicular Values",
+        s=2,
+    )
     # At each point, write down the hist value beside it
-    # for dist, value in zip(
-    #     np.array(dist1)[mask],
-    #     np.array(values1)[mask],
-    # ):
-    # ax2.text(
-    #     dist,
-    #     value,
-    #     f"{value:.1f}",
-    #     color="lime",
-    #     fontsize=5,
-    #     ha="left",
-    #     va="bottom",
-    # )
+    for dist, value in zip(
+        np.array(dist1)[mask],
+        np.array(values1)[mask],
+    ):
+        ax2.text(
+            dist,
+            value,
+            f"{value:.1f}",
+            color="lime",
+            fontsize=5,
+            ha="left",
+            va="bottom",
+        )
+    for dist, value in zip(dist2, values2):
+        ax2.text(
+            dist,
+            value,
+            f"{value:.1f}",
+            color="red",
+            fontsize=5,
+            ha="left",
+            va="bottom",
+        )
     ax2.set_xlabel("Distance from (x_offset, y_offset) along the line")
     ax2.set_ylabel("Histogram Value", color="lime")
     ax2.tick_params(axis="y", labelcolor="lime")
@@ -276,7 +332,7 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
     ax2.set_title(f"Line Profiles through ({x_offset}, {y_offset})")
 
     ax2.set_xlim(-0.1, 0.1)
-    ax2.set_ylim(0.0, 0.04)
+    # ax2.set_ylim(0.0, 0.04)
     ax2.set_yscale("linear")
     # Set the maximum number of ticks for both axes to avoid clutter
     ax1.xaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
@@ -320,29 +376,30 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
     # print(f"Line profile plot saved to {save_folder / fig_name}")
 
     plt.close(fig)
-    return theta, sum_values1
+    return theta, sum_values1, perp_value, perp_dist
 
 
 input_dict = {
     "x_key": "x_volt_lin",
     "y_key": "y_volt_lin",
-    # "start_time": "2025-03-16T19:45:00Z",
-    # "end_time": "2025-03-16T21:00:00Z",
-    "start_time": "2025-03-06T15:05:00Z",
-    "end_time": "2025-03-06T16:35:00Z",
-    "bins": 200,
+    "start_time": "2025-03-16T20:01:00Z",
+    "end_time": "2025-03-16T20:55:00Z",
+    # "start_time": "2025-03-06T15:05:00Z",
+    # "end_time": "2025-03-06T16:35:00Z",
+    "bins": 10,
     "bin_range": [-0.1, 0.1, -0.1, 0.1],
     "time_normalization": True,
 }
 
 
-read_data = True
+read_data = False
 if "hist" not in locals() or "xedges" not in locals() or "yedges" not in locals() or read_data:
     hist, xedges, yedges, ra_median, dec_median = lexi_functions.get_single_histogram_array(
         **input_dict
     )
 
 theta_list = np.linspace(0, 180, num=181, endpoint=True)
+theta_index = 30
 
 # Find the maximum value in the histogram and its corresponding coordinates
 max_index = np.unravel_index(np.argmax(hist, axis=None), hist.shape)
@@ -350,10 +407,13 @@ max_index = np.unravel_index(np.argmax(hist, axis=None), hist.shape)
 # y_offset = (yedges[max_index[1]] + yedges[max_index[1] + 1]) / 2
 x_offset = 0.0  # X coordinate of the point the line must pass through
 y_offset = 0.0  # Y coordinate of the point the line must pass through
+
+# x_offset_list = np.linspace(-0.1, 0.1, num=10)
+# y_offset_list = np.linspace(-0.1, 0.1, num=10)
 sum_values = []
 start_date = input_dict["start_time"]
 end_date = input_dict["end_time"]
-for theta in theta_list:
+for theta in theta_list[theta_index : theta_index + 1]:
     print(f"Processing line profile for theta = {theta:0.2f} degrees", end="\r")
     # Ensure the histogram is loaded
     if "hist" not in locals():
@@ -362,12 +422,12 @@ for theta in theta_list:
         )
 
     # Generate the line profile and plot it
-    theta, sum_values1 = plot_line_profile(
+    theta, sum_values1, perps_value, perp_dist = plot_line_profile(
         hist, xedges, yedges, theta, x_offset, y_offset, start_date, end_date
     )
     sum_values.append(sum_values1)
 
-
+"""
 # Save, theta, sum_values, x_offset, y_offset, hist, xedges, yedges, ra_median, dec_median to a
 # pickle file
 save_folder = Path("../data/")
@@ -470,3 +530,4 @@ plt.close(fig)
 # Generate the plot
 # plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset)
 # plt.show()
+"""

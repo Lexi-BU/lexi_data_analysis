@@ -83,23 +83,32 @@ fig.add_trace(
     col=2,
 )
 
-# Fit a best fit line between theta_list and sum_values
-coefficients = np.polyfit(theta_list, sum_values, 1)
-fit_line = np.polyval(coefficients, theta_list)
+# Fit a best fit line between theta_list and sum_values (for theta between 0 and 90)
+valid_indices = np.where((theta_list >= 0) & (theta_list <= 90))
+if len(valid_indices[0]) > 0:
+    new_sum_values = np.array([abs(sum_values[i]) for i in valid_indices[0]])
+coefficients = np.polyfit(
+    theta_list[valid_indices[0]],
+    new_sum_values[valid_indices[0]],
+    2,
+)
+best_fit_line = np.polyval(coefficients, theta_list[valid_indices[0]])
 fig.add_trace(
     go.Scatter(
-        x=theta_list,
-        y=fit_line,
-        mode="lines",
+        x=theta_list[valid_indices[0]],
+        y=best_fit_line,
+        mode="markers",
         line=dict(color="orange", width=2),
-        name="Best Fit Line",
+        name="Best Fit Curve",
     ),
     row=1,
     col=2,
 )
 
 # Display the equation of the best fit line
-equation_text = f"best fit line: y = {coefficients[0]:.4f}x + {coefficients[1]:.4f}"
+equation_text = (
+    f"best fit Curve: y = {coefficients[0]:.4f}x² + {coefficients[1]:.4f}x + {coefficients[2]:.4f}"
+)
 fig.add_annotation(
     text=equation_text,
     xref="x2 domain",
@@ -155,8 +164,8 @@ fig.add_trace(
 # Update layout
 fig.update_layout(
     template="plotly_dark",
-    width=1200,
-    height=500,
+    width=1800,
+    height=800,
     margin=dict(l=50, r=50, b=50, t=50),
     hovermode="x unified",
 )
