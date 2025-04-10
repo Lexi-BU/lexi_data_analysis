@@ -523,17 +523,25 @@ im = ax1.imshow(
     aspect="auto",
     cmap="inferno",
 )
-fig.colorbar(im, ax=ax1, label="Counts")
+fig.colorbar(im, ax=ax1, label="counts/s", pad=0.01, shrink=0.9, fraction=0.1)
 ax1.set_xlabel("X")
 ax1.set_ylabel("Y")
-ax1.set_title("2D Histogram with Line")
+ax1.set_title("2D Histogram")
 
 ax1.set_xlim(-0.1, 0.1)
 ax1.set_ylim(-0.1, 0.1)
 
 # Plot the sum of values for each theta
-ax2.plot(theta_list, sum_values, color="lime", marker="o", markersize=2)
-ax2.set_xlabel("Theta (degrees)")
+ax2.plot(theta_list, sum_values, color="lime", linewidth=0.5, ls="--", alpha=0.3)
+ax2.scatter(
+    theta_list,
+    sum_values,
+    color="lime",
+    marker="o",
+    alpha=1,
+    s=5,
+)
+ax2.set_xlabel("θ [°]")
 ax2.set_ylabel("Sum of Histogram Values")
 ax2.set_title("Sum of Histogram Values vs. Theta")
 ax2.set_xlim(0, 180)
@@ -567,8 +575,6 @@ ax2.spines["left"].set_color("lime")
 # Set the tick labels color to match the line color
 ax2.tick_params(axis="y", colors="lime")
 plt.tight_layout()
-save_theta = np.round(theta, 1)
-save_theta = str(save_theta).zfill(6)
 save_folder = Path("../figures/line_profiles_v2/")
 save_folder.mkdir(parents=True, exist_ok=True)
 fig_name = f"20250407_sunset_double_linear_line_profile_sum_values.png"

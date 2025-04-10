@@ -13,8 +13,8 @@ importlib.reload(lexi_functions)
 input_dict = {
     "x_key": "x_volt_lin",
     "y_key": "y_volt_lin",
-    "start_time": "2025-03-06T15:15:00Z",
-    "end_time": "2025-03-06T15:45:00Z",
+    "start_time": "2025-03-07T06:05:00Z",
+    "end_time": "2025-03-07T06:35:00Z",
     "bins": 200,
     "bin_range": [-0.1, 0.1, -0.1, 0.1],
     "time_normalization": True,
@@ -45,8 +45,8 @@ filtered_high_fft_hist = np.where(magnitude_spectrum < high_threshold, fft_hist_
 # Inverse FFT to get the filtered histogram back
 filtered_high_hist = np.fft.ifft2(np.fft.ifftshift(filtered_high_fft_hist)).real
 
-higher_threshold = 0.60 * np.max(magnitude_spectrum)
-lower_threshold = 0.55 * np.max(magnitude_spectrum)
+higher_threshold = 0.65 * np.max(magnitude_spectrum)
+lower_threshold = 0.35 * np.max(magnitude_spectrum)
 # Get the filtedred histogram between the lower and higher thresholds]
 filtered_higher_fft_hist = np.where(
     (magnitude_spectrum > lower_threshold) & (magnitude_spectrum < higher_threshold),

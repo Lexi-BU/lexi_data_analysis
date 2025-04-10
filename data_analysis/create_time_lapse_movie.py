@@ -7,11 +7,11 @@ from moviepy import ImageSequenceClip
 from PIL import Image
 
 # Define the folder containing the PNG images
-image_folder = "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/figures/line_profiles_v2/"
+image_folder = "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/figures/line_profiles_v2/20250316_194500Z_20250316_211500Z/"
 
 # Define the start and end times
-start_time = "2025-03-16_18-00-00"
-end_time = "2025-03-16_22-00-00"
+start_time = "2025-03-16-19-45-00"
+end_time = "2025-03-16-21-15-00"
 
 # Define the frame rate (frames per second)
 frame_rate = 15
@@ -31,9 +31,7 @@ def extract_timestamp(filename):
 
 # Filter the images based on the start and end times
 images = []
-image_list = sorted(
-    glob.glob(image_folder + "20250408_sunset_double_linear_line_profile_theta_*.png")
-)
+image_list = sorted(glob.glob(image_folder + "*.png"))
 for img_path in image_list:
     image_folder = Path(image_folder).expanduser().resolve()
     filename = os.path.basename(img_path)
@@ -74,7 +72,7 @@ output_folder = Path(output_folder).expanduser().resolve()
 output_folder.mkdir(parents=True, exist_ok=True)
 # output_file = f"output_video_{start_time}_{end_time}.mp4"
 # output_file_gif = f"output_video_{start_time}_{end_time}_{frame_rate}.gif"
-output_file = f"20250407_linear_double_line_profiles_{start_time.replace(':', '-')}_to_{end_time.replace(':', '-')}_offset_0_v2.mp4"
+output_file = f"20250409_linear_double_line_profiles_{start_time.replace(':', '-')}_to_{end_time.replace(':', '-')}_offset_0_v2.mp4"
 # output_file_gif = (
 #     f"line_profiles_{start_time.replace(':', '-')}_to_{end_time.replace(':', '-')}_{frame_rate}.gif"
 # )

@@ -1,4 +1,5 @@
 import pickle
+from math import atan2, cos, degrees, radians, sin
 from pathlib import Path
 
 import numpy as np
@@ -121,9 +122,24 @@ fig.add_annotation(
     col=2,
 )
 
-# Initial cyan line in left plot (theta = 0)
+# Initial parameters
 line_length = 0.2
 initial_theta = 0
+
+# Add horizontal dashed line through (0,0)
+fig.add_trace(
+    go.Scatter(
+        x=[-line_length, line_length],
+        y=[0, 0],
+        mode="lines",
+        line=dict(color="white", width=1, dash="dash"),
+        showlegend=False,
+    ),
+    row=1,
+    col=1,
+)
+
+# Initial cyan line in left plot (theta = 0)
 x_line = np.array(
     [
         -line_length * np.cos(np.radians(initial_theta)),
@@ -136,6 +152,8 @@ y_line = np.array(
         line_length * np.sin(np.radians(initial_theta)),
     ]
 )
+
+# Add cyan line
 fig.add_trace(
     go.Scatter(
         x=x_line,
@@ -144,6 +162,44 @@ fig.add_trace(
         line=dict(color="cyan", width=2),
         showlegend=False,
     ),
+    row=1,
+    col=1,
+)
+
+
+# Function to create arc points
+def create_arc_points(theta, length=0.05, num_points=20):
+    arc_points = []
+    for t in np.linspace(0, theta, num_points):
+        arc_points.append([length * np.cos(np.radians(t)), length * np.sin(np.radians(t))])
+    return np.array(arc_points).T
+
+
+# Initial arc (theta = 0)
+arc_x, arc_y = create_arc_points(initial_theta)
+
+# Add arc trace
+fig.add_trace(
+    go.Scatter(
+        x=arc_x,
+        y=arc_y,
+        mode="lines",
+        line=dict(color="white", width=2),
+        showlegend=False,
+    ),
+    row=1,
+    col=1,
+)
+
+# Add theta annotation
+fig.add_annotation(
+    x=0.05 * np.cos(np.radians(initial_theta / 2)),
+    y=0.05 * np.sin(np.radians(initial_theta / 2)) + 0.002,
+    text=f"θ = {initial_theta}°",
+    showarrow=False,
+    font=dict(size=14, color="white"),
+    xref="x1",
+    yref="y1",
     row=1,
     col=1,
 )
@@ -196,10 +252,10 @@ script_tag = soup.new_tag("script")
 script_tag.string = """
 document.addEventListener("DOMContentLoaded", function() {
     var plotDiv = document.querySelector(".plotly-graph-div");
+    var line_length = 0.2;
+    var arc_length = 0.01;
 
     function updateLines(theta) {
-        var line_length = 0.2;
-
         // Compute line coordinates in left plot
         var x_line = [
             -line_length * Math.cos(theta * Math.PI / 180),
@@ -210,19 +266,46 @@ document.addEventListener("DOMContentLoaded", function() {
             line_length * Math.sin(theta * Math.PI / 180)
         ];
 
-        // Update cyan line in left plot (trace index 4)
+        // Update cyan line in left plot (trace index 5)
         Plotly.restyle(plotDiv, {
             'x': [x_line],
             'y': [y_line]
-        }, [4]);
+        }, [5]);
 
-        // Update vertical line in right plot (trace index 5)
+        // Update vertical line in right plot (trace index 8)
         var y_min = Math.min.apply(null, plotDiv.data[1].y);
         var y_max = Math.max.apply(null, plotDiv.data[1].y);
         Plotly.restyle(plotDiv, {
             'x': [[theta, theta]],
             'y': [[y_min, y_max]]
-        }, [5]);
+        }, [8]);
+        
+        // Update arc
+        var arc_points = [];
+        var num_points = 20;
+        for (var i = 0; i <= num_points; i++) {
+            var t = theta * i / num_points;
+            arc_points.push([
+                arc_length * Math.cos(t * Math.PI / 180),
+                arc_length * Math.sin(t * Math.PI / 180)
+            ]);
+        }
+        var arc_x = arc_points.map(p => p[0]);
+        var arc_y = arc_points.map(p => p[1]);
+        
+        // Update arc (trace index 6)
+        Plotly.restyle(plotDiv, {
+            'x': [arc_x],
+            'y': [arc_y]
+        }, [6]);
+        
+        // Update theta annotation (annotation index 1)
+        var mid_angle = theta / 2;
+        Plotly.relayout(plotDiv, {
+            'annotations[1].text': 'θ = ' + theta.toFixed(1) + '°',
+            'annotations[1].x': 0.28,
+            'annotations[1].y': 0.5
+        });
     }
 
     plotDiv.on('plotly_hover', function(data) {
