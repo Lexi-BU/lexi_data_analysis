@@ -311,6 +311,20 @@ def get_single_histogram_array(
     if df is None or df.empty:
         raise ValueError("No data found in the specified time range.")
 
+    lower_threshold = 2
+    upper_threshold = 3.3
+    # Select only rows where for all Channel1, Channel2, Channel3, Channel4 are between the
+    # thresholds
+    df = df[
+        (df["Channel1"] >= lower_threshold)
+        & (df["Channel1"] <= upper_threshold)
+        & (df["Channel2"] >= lower_threshold)
+        & (df["Channel2"] <= upper_threshold)
+        & (df["Channel3"] >= lower_threshold)
+        & (df["Channel3"] <= upper_threshold)
+        & (df["Channel4"] >= lower_threshold)
+        & (df["Channel4"] <= upper_threshold)
+    ]
     # Select the data for the specified time range
     x_data = df.loc[start_time:end_time, x_key].values
     y_data = df.loc[start_time:end_time, y_key].values

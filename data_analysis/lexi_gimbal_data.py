@@ -7,7 +7,7 @@ import pandas as pd
 
 def get_lexi_look_direction_data():
     # Get all the files in the directory
-    files = glob.glob("../data/lexi_pointing_data/*.csv")
+    files = glob.glob("../data/lexi_pointing_data_from_grafana/*.csv")
 
     print(f"Found {len(files)} files")
     # Create an empty dataframe
@@ -35,16 +35,18 @@ def get_lexi_look_direction_data():
     # Sort the data
     df = df.sort_index()
 
+    # Add Epo
+
     # Check for duplicate indices
     df = df[~df.index.duplicated(keep="first")]
 
     # Resample the data to 1 minute cadence
-    df = df.resample("5s").median()
+    # df = df.resample("5s").median()
 
     # Interpolate the missing values using linear interpolation
-    df = df.interpolate(method="linear")
+    # df = df.interpolate(method="linear")
     # save the data
-    df.to_csv("../data/lexi_look_direction_data.csv", index=True)
+    df.to_csv("../data/lexi_look_direction_data_resampled_uninterpolated.csv", index=True)
 
     return df
 
@@ -53,7 +55,7 @@ if __name__ == "__main__":
     # Get the data
     # lexi_df = get_lexi_look_direction_data()
 
-    lexi_df = pd.read_csv("../data/lexi_look_direction_data.csv")
+    lexi_df = pd.read_csv("../data/lexi_look_direction_data_uninterpolated.csv")
     # Set the Epoch column to index
     lexi_df["Epoch"] = pd.to_datetime(lexi_df["Epoch"])
     lexi_df = lexi_df.set_index("Epoch")
@@ -78,7 +80,7 @@ if __name__ == "__main__":
         plt.title(f"RA and Dec of LEXI from {start_time} to {end_time}")
         plt.legend()
         plt.grid()
-        plt.savefig(f"../figures/lexi_look_direction_{start_time}_{end_time}.png")
+        plt.savefig(f"../figures/lexi_look_direction_{start_time}_{end_time}_uninterpolated.png")
         plt.close()
         # Update the start_time and end_time
         start_time = end_time - pd.Timedelta("1h")
