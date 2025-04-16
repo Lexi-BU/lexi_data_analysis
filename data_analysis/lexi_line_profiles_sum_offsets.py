@@ -18,7 +18,6 @@ np.seterr(divide="ignore", invalid="ignore")
 # Use TkAgg for matplotlib
 
 
-
 def get_histogram_values_along_line_both_directions(
     hist, xedges, yedges, theta, x_offset, y_offset
 ):
@@ -315,6 +314,35 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
         alpha=1,
         s=2,
     )
+
+    # Select the values2 that are within 0.04 distance from the x_offset, y_offset
+    values2_selected = []
+    dist2_selected = []
+    for dist, value in zip(dist2, values2):
+        if abs(dist) <= 0.04:
+            dist2_selected.append(dist)
+            values2_selected.append(value)
+    # Get a best fit line for the selected values2
+    if len(dist2_selected) > 0:
+        coeffs = np.polyfit(dist2_selected, values2_selected, 1)
+        poly_fit = np.poly1d(coeffs)
+        x_fit = np.linspace(-0.04, 0.04, 100)
+        y_fit = poly_fit(x_fit)
+        ax2b.plot(x_fit, y_fit, color="w", linestyle="--", linewidth=2)
+        # Add the equation of the line to the plot right above the line
+        ax2b.text(
+            0.02,
+            0.37,
+            f"y = {coeffs[0]:.3f}x + {coeffs[1]:.3f}",
+            transform=ax2b.transAxes,
+            fontsize=12,
+            # Rotate the text by the slope of the line
+            rotation=8,
+            horizontalalignment="left",
+            verticalalignment="top",
+            bbox=dict(facecolor="k", alpha=0.5, edgecolor="none"),
+        )
+
     # for dist, value in zip(dist2, values2):
     #     ax2b.text(
     #         dist,
@@ -362,10 +390,11 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
     ax2.set_title(f"Line Profiles through ({x_offset}, {y_offset})")
 
     ax2.set_xlim(-0.04, 0.04)
-    # ax2.set_ylim(0, 0.032)
+    ax2.set_ylim(0, 30)
+    ax2.set_yscale("linear")
 
     # ax2b.set_ylim(0, 0.014)
-    ax2.set_yscale("linear")
+    # ax2.set_yscale("linear")
     # Set the maximum number of ticks for both axes to avoid clutter
     ax1.xaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
     ax1.yaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
@@ -556,7 +585,7 @@ with open(save_file, "wb") as f:
 #     ra_median = data["ra_median"]
 #     dec_median = data["dec_median"]
 
-
+"""
 plt.style.use("dark_background")
 # Create figure with 2 subplots
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
@@ -630,3 +659,4 @@ plt.close(fig)
 # Generate the plot
 # plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset)
 # plt.show()
+"""
