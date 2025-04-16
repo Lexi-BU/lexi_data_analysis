@@ -96,5 +96,5 @@ lexi_functions.plot_histograms(
     save_folder="../figures/histogram_normalized_diff/",
     save_plot_name="histogram_normalized_diff",
     save_plot=True,
-    color_map_center="viridis",
+    color_map_center="plasma",
 )

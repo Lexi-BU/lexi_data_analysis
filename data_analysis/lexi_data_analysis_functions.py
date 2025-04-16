@@ -380,7 +380,7 @@ def plot_histograms(
     save_plot=False,
     save_plot_name=None,
     save_plot_format="png",
-    color_map="viridis",
+    color_map="plasma",
     color_map_center="coolwarm",
     color_map_center_vmin=None,
     color_map_center_vmax=None,
