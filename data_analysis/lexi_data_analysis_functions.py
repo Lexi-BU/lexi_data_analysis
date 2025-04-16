@@ -361,6 +361,10 @@ def plot_histograms(
     yedges_left=None,
     xedges_right=None,
     yedges_right=None,
+    xedges_center=None,
+    yedges_center=None,
+    xedges=None,
+    yedges=None,
     x_key=None,
     y_key=None,
     start_time_left=None,
@@ -455,7 +459,32 @@ def plot_histograms(
         parser.parse(start_time_left) if isinstance(start_time_left, str) else start_time_left
     )
     end_time_left = parser.parse(end_time_left) if isinstance(end_time_left, str) else end_time_left
-    """Plot the histograms and save the plot."""
+
+    if xedges_left is None or yedges_left is None:
+        if xedges is None or yedges is None:
+            raise ValueError(
+                "xedges and yedges must be provided if xedges_left or yedges_left are None."
+            )
+        else:
+            xedges_left = xedges
+            yedges_left = yedges
+    if xedges_right is None or yedges_right is None:
+        if xedges is None or yedges is None:
+            raise ValueError(
+                "xedges and yedges must be provided if xedges_right or yedges_right are None."
+            )
+        else:
+            xedges_right = xedges
+            yedges_right = yedges
+    if xedges_center is None or yedges_center is None:
+        if xedges is None or yedges is None:
+            raise ValueError(
+                "xedges and yedges must be provided if xedges_center or yedges_center are None."
+            )
+        else:
+            xedges_center = xedges
+            yedges_center = yedges
+
     # Set the font size
     plt.rcParams.update({"font.size": 16})
     # Use the black background style
@@ -546,15 +575,16 @@ def plot_histograms(
     im_center = axs[1][0].imshow(
         hist_center.T,
         origin="lower",
-        extent=[xedges_left[0], xedges_left[-1], yedges_left[0], yedges_left[-1]],
+        extent=[xedges_center[0], xedges_center[-1], yedges_center[0], yedges_center[-1]],
         aspect="equal",
         interpolation="nearest",
         cmap=color_map_center,
-        vmin=color_map_center_vmin,
-        vmax=color_map_center_vmax,
+        norm=mpl.colors.LogNorm(),
+        # vmin=color_map_center_vmin,
+        # vmax=color_map_center_vmax,
     )
     axs[1, 0].set_title(
-        "Difference Histogram"
+        "Scaled/Difference Histogram"
         # f"{start_time_left.strftime('%H:%M:%S')} to {end_time_left.strftime('%H:%M:%S')} - {start_time_right.strftime('%H:%M:%S')} to {end_time_right.strftime('%H:%M:%S')}"
     )
     axs[1, 0].set_xlabel(x_key)
@@ -586,6 +616,10 @@ def plot_histograms(
     df_pointing_right = df_pointing.loc[
         start_time_right:end_time_right
     ]  # For the right histogram time range
+    ra_min = df_pointing_right["ra_lexi"].min()
+    ra_max = df_pointing_right["ra_lexi"].max()
+    dec_min = df_pointing_right["dec_lexi"].min()
+    dec_max = df_pointing_right["dec_lexi"].max()
     # Make the RA and Dec plot for the right histogram time range
     axs[1, 1].scatter(
         df_pointing_right.index,
@@ -617,6 +651,19 @@ def plot_histograms(
     twin_ax.spines["right"].set_color("m")  # RA
     axs[1, 1].tick_params(axis="y", colors="c")  # Dec
     twin_ax.tick_params(axis="y", colors="m")  # RA
+
+    # Set the y-axis limits for the pointing plot (if the difference between the min and max is less
+    # than 1 degree then set it to 5 degrees)
+    # dec_range = dec_max - dec_min
+    # ra_range = ra_max - ra_min
+    # if dec_range < 1:
+    #     axs[1, 1].set_ylim(dec_min - 2.5, dec_max + 2.5)
+    # else:
+    #     axs[1, 1].set_ylim(dec_min, dec_max)
+    # if ra_range < 1:
+    #     twin_ax.set_ylim(ra_min - 2.5, ra_max + 2.5)
+    # else:
+    #     twin_ax.set_ylim(ra_min, ra_max)
 
     # axs[1][1].axis("off")
     # Set the title

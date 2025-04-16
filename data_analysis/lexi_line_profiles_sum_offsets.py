@@ -15,8 +15,6 @@ warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 # Suppress dvision by zero warnings in numpy
 np.seterr(divide="ignore", invalid="ignore")
 
-# Use TkAgg for matplotlib
-
 
 def get_histogram_values_along_line_both_directions(
     hist, xedges, yedges, theta, x_offset, y_offset
