@@ -385,6 +385,7 @@ def plot_histograms(
     color_map_center_vmin=None,
     color_map_center_vmax=None,
     fixed_colorbar_limits=False,
+    single_histogram=False,
 ):
     """
     Plot the histograms of two dataframes and save the plot.
@@ -490,192 +491,307 @@ def plot_histograms(
     # Use the black background style
     plt.style.use("dark_background")
 
-    # Create a figure with subplots
-    fig, axs = plt.subplots(2, 2, figsize=(18, 18), sharex=False, sharey=False)
-    plt.subplots_adjust(hspace=0.15, wspace=0.05)
+    if not single_histogram:
+        # Create a figure with subplots
+        fig, axs = plt.subplots(2, 2, figsize=(18, 18), sharex=False, sharey=False)
+        plt.subplots_adjust(hspace=0.15, wspace=0.05)
 
-    # Plot the left histogram
-    im_left = axs[0][0].imshow(
-        hist_left.T,
-        origin="lower",
-        extent=[xedges_left[0], xedges_left[-1], yedges_left[0], yedges_left[-1]],
-        aspect="equal",
-        interpolation="nearest",
-        cmap=color_map,
-        # vmin=mincnt,
-    )
+        # Plot the left histogram
+        im_left = axs[0][0].imshow(
+            hist_left.T,
+            origin="lower",
+            extent=[xedges_left[0], xedges_left[-1], yedges_left[0], yedges_left[-1]],
+            aspect="equal",
+            interpolation="nearest",
+            cmap=color_map,
+            # vmin=mincnt,
+        )
 
-    axs[0, 0].set_title(
-        f"{start_time_left.strftime('%H:%M:%S')} to {end_time_left.strftime('%H:%M:%S')}"
-    )
-    axs[0, 0].set_xlabel(x_key)
-    axs[0, 0].set_ylabel(y_key)
-    # Set the aspect ratio to be equal
-    axs[0, 0].set_aspect("equal", adjustable="box")
-    # Add the colorbar
-    cbar_left = fig.colorbar(
-        im_left,
-        ax=axs[0][0],
-        orientation="horizontal",
-        pad=0.1,
-        aspect=70,
-        fraction=0.02,
-        location="top",
-        shrink=0.8,
-    )
-    if fixed_colorbar_limits:
-        # Set the color bar limits to be the same for both histograms
-        cbar_left.set_clim(vmin=mincnt, vmax=np.max(hist_left))
-    cbar_left.set_label("cts/s")
-    cbar_left.ax.tick_params(labelsize=10)
-    cbar_left.ax.set_xticklabels(cbar_left.get_ticks(), fontsize=10)
-    cbar_left.ax.set_xticks(cbar_left.get_ticks())
-    cbar_left.ax.xaxis.set_major_formatter(FormatStrFormatter("%.2g"))
+        axs[0, 0].set_title(
+            f"{start_time_left.strftime('%H:%M:%S')} to {end_time_left.strftime('%H:%M:%S')}"
+        )
+        axs[0, 0].set_xlabel(x_key)
+        axs[0, 0].set_ylabel(y_key)
+        # Set the aspect ratio to be equal
+        axs[0, 0].set_aspect("equal", adjustable="box")
+        # Add the colorbar
+        cbar_left = fig.colorbar(
+            im_left,
+            ax=axs[0][0],
+            orientation="horizontal",
+            pad=0.1,
+            aspect=70,
+            fraction=0.02,
+            location="top",
+            shrink=0.8,
+        )
+        if fixed_colorbar_limits:
+            # Set the color bar limits to be the same for both histograms
+            cbar_left.set_clim(vmin=mincnt, vmax=np.max(hist_left))
+        cbar_left.set_label("cts/s")
+        cbar_left.ax.tick_params(labelsize=10)
+        cbar_left.ax.set_xticklabels(cbar_left.get_ticks(), fontsize=10)
+        cbar_left.ax.set_xticks(cbar_left.get_ticks())
+        cbar_left.ax.xaxis.set_major_formatter(FormatStrFormatter("%.2g"))
 
-    # Plot the right histogram
-    im_right = axs[0][1].imshow(
-        hist_right.T,
-        origin="lower",
-        extent=[xedges_right[0], xedges_right[-1], yedges_right[0], yedges_right[-1]],
-        aspect="equal",
-        interpolation="nearest",
-        cmap=color_map,
-        # vmin=mincnt,
-    )
-    axs[0, 1].set_title(
-        f"{start_time_right.strftime('%H:%M:%S')} to {end_time_right.strftime('%H:%M:%S')}"
-    )
-    axs[0, 1].set_xlabel(x_key)
-    axs[0, 1].set_ylabel(y_key)
-    # Set the aspect ratio to be equal
-    axs[0, 1].set_aspect("equal", adjustable="box")
-    # Add the colorbar
-    cbar_right = fig.colorbar(
-        im_right,
-        ax=axs[0][1],
-        orientation="horizontal",
-        pad=0.1,
-        aspect=70,
-        fraction=0.02,
-        location="top",
-        shrink=0.8,
-    )
-    cbar_right.set_label("cts/s")
-    cbar_right.ax.tick_params(labelsize=10)
-    cbar_right.ax.set_xticklabels(cbar_right.get_ticks(), fontsize=10)
-    cbar_right.ax.set_xticks(cbar_right.get_ticks())
-    cbar_right.ax.xaxis.set_major_formatter(FormatStrFormatter("%.2g"))
-    # Set the maximum nuber of sig figures for colorbar ticks to 2 in normal notation
+        # Plot the right histogram
+        im_right = axs[0][1].imshow(
+            hist_right.T,
+            origin="lower",
+            extent=[xedges_right[0], xedges_right[-1], yedges_right[0], yedges_right[-1]],
+            aspect="equal",
+            interpolation="nearest",
+            cmap=color_map,
+            # vmin=mincnt,
+        )
+        axs[0, 1].set_title(
+            f"{start_time_right.strftime('%H:%M:%S')} to {end_time_right.strftime('%H:%M:%S')}"
+        )
+        axs[0, 1].set_xlabel(x_key)
+        axs[0, 1].set_ylabel(y_key)
+        # Set the aspect ratio to be equal
+        axs[0, 1].set_aspect("equal", adjustable="box")
+        # Add the colorbar
+        cbar_right = fig.colorbar(
+            im_right,
+            ax=axs[0][1],
+            orientation="horizontal",
+            pad=0.1,
+            aspect=70,
+            fraction=0.02,
+            location="top",
+            shrink=0.8,
+        )
+        cbar_right.set_label("cts/s")
+        cbar_right.ax.tick_params(labelsize=10)
+        cbar_right.ax.set_xticklabels(cbar_right.get_ticks(), fontsize=10)
+        cbar_right.ax.set_xticks(cbar_right.get_ticks())
+        cbar_right.ax.xaxis.set_major_formatter(FormatStrFormatter("%.2g"))
+        # Set the maximum nuber of sig figures for colorbar ticks to 2 in normal notation
 
-    # Plot the center histogram
-    if color_map_center_vmin is None:
-        color_map_center_vmin = -np.max(np.abs(hist_center))
-    if color_map_center_vmax is None:
-        color_map_center_vmax = np.max(np.abs(hist_center))
-    im_center = axs[1][0].imshow(
-        hist_center.T,
-        origin="lower",
-        extent=[xedges_center[0], xedges_center[-1], yedges_center[0], yedges_center[-1]],
-        aspect="equal",
-        interpolation="nearest",
-        cmap=color_map_center,
-        norm=mpl.colors.LogNorm(),
-        # vmin=color_map_center_vmin,
-        # vmax=color_map_center_vmax,
-    )
-    axs[1, 0].set_title(
-        "Scaled/Difference Histogram"
-        # f"{start_time_left.strftime('%H:%M:%S')} to {end_time_left.strftime('%H:%M:%S')} - {start_time_right.strftime('%H:%M:%S')} to {end_time_right.strftime('%H:%M:%S')}"
-    )
-    axs[1, 0].set_xlabel(x_key)
-    axs[1, 0].set_ylabel(y_key)
-    # Set the aspect ratio to be equal
-    axs[1, 0].set_aspect("equal", adjustable="box")
-    # Add the colorbar
-    cbar_center = fig.colorbar(
-        im_center,
-        ax=axs[1][0],
-        orientation="horizontal",
-        pad=0.1,
-        aspect=70,
-        fraction=0.02,
-        location="top",
-        shrink=0.8,
-    )
-    cbar_center.set_label("Cts/s")
-    cbar_center.ax.tick_params(labelsize=10)
-    cbar_center.ax.set_xticklabels(cbar_center.get_ticks(), fontsize=10, rotation=45)
-    cbar_center.ax.set_xticks(cbar_center.get_ticks())
-    cbar_center.ax.xaxis.set_major_formatter(FormatStrFormatter("%.3f"))
-    # Rotate the colorbar ticks for better readability
-    # cbar_center.ax.tick_params(axis="x", rotation=45)
-    pointing_file_name = (
-        "../data/merged_lexi_hk_look_direction_data_2025-01-16_00-00-00_to_2025-03-17_00-00-00.pkl"
-    )
-    df_pointing = pd.read_pickle(pointing_file_name)
-    df_pointing_right = df_pointing.loc[
-        start_time_right:end_time_right
-    ]  # For the right histogram time range
-    ra_min = df_pointing_right["ra_lexi"].min()
-    ra_max = df_pointing_right["ra_lexi"].max()
-    dec_min = df_pointing_right["dec_lexi"].min()
-    dec_max = df_pointing_right["dec_lexi"].max()
-    # Make the RA and Dec plot for the right histogram time range
-    axs[1, 1].scatter(
-        df_pointing_right.index,
-        df_pointing_right["dec_lexi"],
-        color="c",
-        s=1,
-        alpha=1,
-    )
-    twin_ax = axs[1, 1].twinx()  # Create a twin axis for RA
-    twin_ax.scatter(
-        df_pointing_right.index,
-        df_pointing_right["ra_lexi"],
-        color="m",
-        s=1,
-        alpha=1,
-    )
-    axs[1, 1].set_title(
-        f"Look Direction \n {start_time_right.strftime('%H:%M:%S')} to {end_time_right.strftime('%H:%M:%S')}"
-    )
-    axs[1, 1].set_xlabel("Time")
-    axs[1, 1].set_ylabel("Dec", color="c")
-    twin_ax.set_ylabel("RA", color="m")
+        # Plot the center histogram
+        if color_map_center_vmin is None:
+            color_map_center_vmin = np.min(np.abs(hist_center))
+        if color_map_center_vmax is None:
+            color_map_center_vmax = np.max(np.abs(hist_center))
+        im_center = axs[1][0].imshow(
+            hist_center.T,
+            origin="lower",
+            extent=[xedges_center[0], xedges_center[-1], yedges_center[0], yedges_center[-1]],
+            aspect="equal",
+            interpolation="nearest",
+            cmap=color_map_center,
+            norm=mpl.colors.LogNorm(),
+            # vmin=color_map_center_vmin,
+            # vmax=color_map_center_vmax,
+        )
+        axs[1, 0].set_title(
+            "Scaled/Difference Histogram"
+            # f"{start_time_left.strftime('%H:%M:%S')} to {end_time_left.strftime('%H:%M:%S')} - {start_time_right.strftime('%H:%M:%S')} to {end_time_right.strftime('%H:%M:%S')}"
+        )
+        axs[1, 0].set_xlabel(x_key)
+        axs[1, 0].set_ylabel(y_key)
+        # Set the aspect ratio to be equal
+        axs[1, 0].set_aspect("equal", adjustable="box")
+        # Add the colorbar
+        cbar_center = fig.colorbar(
+            im_center,
+            ax=axs[1][0],
+            orientation="horizontal",
+            pad=0.1,
+            aspect=70,
+            fraction=0.02,
+            location="top",
+            shrink=0.8,
+        )
+        cbar_center.set_label("Cts/s")
+        cbar_center.ax.tick_params(labelsize=10)
+        cbar_center.ax.set_xticklabels(cbar_center.get_ticks(), fontsize=10, rotation=45)
+        cbar_center.ax.set_xticks(cbar_center.get_ticks())
+        cbar_center.ax.xaxis.set_major_formatter(FormatStrFormatter("%.0f"))
+        # Rotate the colorbar ticks for better readability
+        # cbar_center.ax.tick_params(axis="x", rotation=45)
+        pointing_file_name = "../data/merged_lexi_hk_look_direction_data_2025-01-16_00-00-00_to_2025-03-17_00-00-00.pkl"
+        df_pointing = pd.read_pickle(pointing_file_name)
+        df_pointing_right = df_pointing.loc[
+            start_time_right:end_time_right
+        ]  # For the right histogram time range
+        ra_min = df_pointing_right["ra_lexi"].min()
+        ra_max = df_pointing_right["ra_lexi"].max()
+        dec_min = df_pointing_right["dec_lexi"].min()
+        dec_max = df_pointing_right["dec_lexi"].max()
+        # Make the RA and Dec plot for the right histogram time range
+        axs[1, 1].scatter(
+            df_pointing_right.index,
+            df_pointing_right["dec_lexi"],
+            color="c",
+            s=1,
+            alpha=1,
+        )
+        twin_ax = axs[1, 1].twinx()  # Create a twin axis for RA
+        twin_ax.scatter(
+            df_pointing_right.index,
+            df_pointing_right["ra_lexi"],
+            color="m",
+            s=1,
+            alpha=1,
+        )
+        axs[1, 1].set_title(
+            f"Look Direction \n {start_time_right.strftime('%H:%M:%S')} to {end_time_right.strftime('%H:%M:%S')}"
+        )
+        axs[1, 1].set_xlabel("Time")
+        axs[1, 1].set_ylabel("Dec", color="c")
+        twin_ax.set_ylabel("RA", color="m")
 
-    # Set the grid for the pointing plot
-    axs[1, 1].grid(color="c", linestyle="--", linewidth=0.5, alpha=0.5)
+        # Set the grid for the pointing plot
+        axs[1, 1].grid(color="c", linestyle="--", linewidth=0.5, alpha=0.5)
 
-    # Set the spine color to match the line color
-    twin_ax.spines["left"].set_color("c")  # Dec
-    twin_ax.spines["right"].set_color("m")  # RA
-    axs[1, 1].tick_params(axis="y", colors="c")  # Dec
-    twin_ax.tick_params(axis="y", colors="m")  # RA
+        # Set the spine color to match the line color
+        twin_ax.spines["left"].set_color("c")  # Dec
+        twin_ax.spines["right"].set_color("m")  # RA
+        axs[1, 1].tick_params(axis="y", colors="c")  # Dec
+        twin_ax.tick_params(axis="y", colors="m")  # RA
 
-    # Set the y-axis limits for the pointing plot (if the difference between the min and max is less
-    # than 1 degree then set it to 5 degrees)
-    # dec_range = dec_max - dec_min
-    # ra_range = ra_max - ra_min
-    # if dec_range < 1:
-    #     axs[1, 1].set_ylim(dec_min - 2.5, dec_max + 2.5)
-    # else:
-    #     axs[1, 1].set_ylim(dec_min, dec_max)
-    # if ra_range < 1:
-    #     twin_ax.set_ylim(ra_min - 2.5, ra_max + 2.5)
-    # else:
-    #     twin_ax.set_ylim(ra_min, ra_max)
+        # Set the y-axis limits for the pointing plot (if the difference between the min and max is less
+        # than 1 degree then set it to 5 degrees)
+        # dec_range = dec_max - dec_min
+        # ra_range = ra_max - ra_min
+        # if dec_range < 1:
+        #     axs[1, 1].set_ylim(dec_min - 2.5, dec_max + 2.5)
+        # else:
+        #     axs[1, 1].set_ylim(dec_min, dec_max)
+        # if ra_range < 1:
+        #     twin_ax.set_ylim(ra_min - 2.5, ra_max + 2.5)
+        # else:
+        #     twin_ax.set_ylim(ra_min, ra_max)
 
-    # axs[1][1].axis("off")
-    # Set the title
-    fig.suptitle(
-        f"Histogram of {x_key} and {y_key} \n from {start_time_left.strftime('%Y-%m-%d %H:%M:%S')} to {end_time_left.strftime('%Y-%m-%d %H:%M:%S')} and {start_time_right.strftime('%Y-%m-%d %H:%M:%S')} to {end_time_right.strftime('%Y-%m-%d %H:%M:%S')}",
-        fontsize=14,
-    )
+        # axs[1][1].axis("off")
+        # Set the title
+        fig.suptitle(
+            f"Histogram of {x_key} and {y_key} \n from {start_time_left.strftime('%Y-%m-%d %H:%M:%S')} to {end_time_left.strftime('%Y-%m-%d %H:%M:%S')} and {start_time_right.strftime('%Y-%m-%d %H:%M:%S')} to {end_time_right.strftime('%Y-%m-%d %H:%M:%S')}",
+            fontsize=14,
+        )
 
-    # Manage the ticks
-    for ax in axs.flat:
-        ax.label_outer()
-        ax.tick_params(
+        # Manage the ticks
+        for ax in axs.flat:
+            ax.label_outer()
+            ax.tick_params(
+                axis="both",
+                which="major",
+                direction="in",
+                labelsize=12,
+                left=True,
+                right=True,
+                top=True,
+                bottom=True,
+            )
+            ax.tick_params(
+                axis="both",
+                which="minor",
+                direction="in",
+                labelsize=12,
+                left=True,
+                right=True,
+                top=True,
+                bottom=True,
+            )
+            ax.locator_params(axis="x", nbins=5)
+            ax.locator_params(axis="y", nbins=5)
+
+        axs[0, 1].tick_params(
+            axis="y",
+            which="both",
+            labelleft=False,
+            labelright=True,
+        )
+        axs[0, 1].yaxis.set_label_position("right")
+
+        axs[1, 0].set_ylabel("")
+        axs[0, 0].grid(True, color="c", alpha=0.2)
+        axs[1, 0].grid(True, color="k", alpha=0.2)
+        axs[0, 1].grid(True, color="c", alpha=0.2)
+        axs[1, 1].grid(True, color="c", alpha=0.2)
+
+        # Rotate the x-axis labels for the bottom plots to be more readable
+        axs[1, 1].set_xticklabels(
+            [label if i % 2 == 0 else "" for i, label in enumerate(axs[1, 1].get_xticklabels())],
+            rotation=45,
+            ha="right",
+        )  # Rotate every other label to avoid overlap
+        axs[1, 1].tick_params(axis="x", which="major", labelsize=10)
+        axs[1, 1].tick_params(axis="x", which="minor", labelsize=10)
+        axs[1, 1].tick_params(axis="y", which="major", labelsize=10, labelleft=True)
+
+        # Save the plot
+        if save_plot:
+            if save_plot_name is None:
+                save_plot_name = f"histogram_{x_key}_{y_key}_{start_time_left.strftime('%Y-%m-%d_%H-%M-%s')}_to_{end_time_left.strftime('%Y-%m-%d_%H-%M-%s')}_{start_time_right.strftime('%Y-%m-%d_%H-%M-%s')}_to_{end_time_right.strftime('%Y-%m-%d_%H-%M-%s')}_{delta_time_left}_{delta_time_right}.{save_plot_format}"
+            save_path = Path(save_folder)
+            save_path.mkdir(parents=True, exist_ok=True)
+            plt.savefig(
+                save_path / save_plot_name,
+                format=save_plot_format,
+                dpi=300,
+                bbox_inches="tight",
+                pad_inches=0.1,
+            )
+            plt.close()
+    elif single_histogram:
+        # Create a figure with subplots
+        fig, axs = plt.subplots(1, 1, figsize=(8, 8), sharex=False, sharey=False)
+        plt.subplots_adjust(hspace=0.15, wspace=0.05)
+
+        if color_map_center_vmin is None:
+            color_map_center_vmin = -np.max(np.abs(hist_center))
+        if color_map_center_vmax is None:
+            color_map_center_vmax = np.max(np.abs(hist_center))
+        # Plot the center histogram
+        im_center = axs.imshow(
+            hist_center.T,
+            origin="lower",
+            extent=[xedges_center[0], xedges_center[-1], yedges_center[0], yedges_center[-1]],
+            aspect="equal",
+            interpolation="nearest",
+            cmap=color_map_center,
+            # cmap=cmap,
+            # norm=mpl.colors.LogNorm(),#
+            # norm=norm,
+            norm=mpl.colors.SymLogNorm(
+                linthresh=0.001, linscale=0.1, vmin=-0.04, vmax=0.04, clip=False
+            ),
+            # vmin=color_map_center_vmin,
+            # vmax=color_map_center_vmax,
+        )
+        fig.suptitle(
+            f"{start_time_left.strftime('%Y-%m-%d_%H:%M:%S')} to {end_time_left.strftime('%Y-%m-%d_%H:%M:%S')} - \n {start_time_right.strftime('%Y-%m-%d_%H:%M:%S')} to {end_time_right.strftime('%Y-%m-%d_%H:%M:%S')}",
+            fontsize=14,
+            y=0.92,
+        )
+        axs.set_xlabel(x_key)
+        axs.set_ylabel(y_key)
+        # Set the aspect ratio to be equal
+        axs.set_aspect("equal", adjustable="box")
+        # Add the colorbar
+        cbar_center = fig.colorbar(
+            im_center,
+            ax=axs,
+            orientation="vertical",
+            pad=0.01,
+            aspect=70,
+            fraction=0.02,
+            location="right",
+            shrink=0.8,
+        )
+        cbar_center.set_label("Count difference (cts/s)")
+        cbar_center.ax.tick_params(labelsize=10)
+        # cbar_center.ax.set_yticklabels(cbar_center.get_ticks(), fontsize=10, rotation=0)
+        cbar_center.ax.set_yticks(cbar_center.get_ticks())
+        cbar_center.ax.yaxis.set_major_formatter(FormatStrFormatter("%.3f"))
+
+        axs.grid(True, color="c", alpha=0.2)
+
+        axs.label_outer()
+        axs.tick_params(
             axis="both",
             which="major",
             direction="in",
@@ -685,7 +801,7 @@ def plot_histograms(
             top=True,
             bottom=True,
         )
-        ax.tick_params(
+        axs.tick_params(
             axis="both",
             which="minor",
             direction="in",
@@ -695,44 +811,24 @@ def plot_histograms(
             top=True,
             bottom=True,
         )
-        ax.locator_params(axis="x", nbins=5)
-        ax.locator_params(axis="y", nbins=5)
+        axs.locator_params(axis="x", nbins=5)
+        axs.locator_params(axis="y", nbins=5)
 
-    axs[0, 1].tick_params(
-        axis="y",
-        which="both",
-        labelleft=False,
-        labelright=True,
-    )
-    axs[0, 1].yaxis.set_label_position("right")
+        axs.tick_params(axis="x", which="major", labelsize=10)
+        axs.tick_params(axis="x", which="minor", labelsize=10)
+        axs.tick_params(axis="y", which="major", labelsize=10)
+        axs.tick_params(axis="y", which="minor", labelsize=10)
 
-    axs[1, 0].set_ylabel("")
-    axs[0, 0].grid(True, color="c", alpha=0.2)
-    axs[1, 0].grid(True, color="k", alpha=0.2)
-    axs[0, 1].grid(True, color="c", alpha=0.2)
-    axs[1, 1].grid(True, color="c", alpha=0.2)
-
-    # Rotate the x-axis labels for the bottom plots to be more readable
-    axs[1, 1].set_xticklabels(
-        [label if i % 2 == 0 else "" for i, label in enumerate(axs[1, 1].get_xticklabels())],
-        rotation=45,
-        ha="right",
-    )  # Rotate every other label to avoid overlap
-    axs[1, 1].tick_params(axis="x", which="major", labelsize=10)
-    axs[1, 1].tick_params(axis="x", which="minor", labelsize=10)
-    axs[1, 1].tick_params(axis="y", which="major", labelsize=10, labelleft=True)
-
-    # Save the plot
-    if save_plot:
-        if save_plot_name is None:
-            save_plot_name = f"histogram_{x_key}_{y_key}_{start_time_left.strftime('%Y-%m-%d_%H-%M-%s')}_to_{end_time_left.strftime('%Y-%m-%d_%H-%M-%s')}_{start_time_right.strftime('%Y-%m-%d_%H-%M-%s')}_to_{end_time_right.strftime('%Y-%m-%d_%H-%M-%s')}_{delta_time_left}_{delta_time_right}.{save_plot_format}"
-        save_path = Path(save_folder)
-        save_path.mkdir(parents=True, exist_ok=True)
-        plt.savefig(
-            save_path / save_plot_name,
-            format=save_plot_format,
-            dpi=300,
-            bbox_inches="tight",
-            pad_inches=0.1,
-        )
-        plt.close()
+        if save_plot:
+            if save_plot_name is None:
+                save_plot_name = f"single_histogram_{x_key}_{y_key}_{start_time_left.strftime('%Y-%m-%d_%H-%M-%s')}_to_{end_time_left.strftime('%Y-%m-%d_%H-%M-%s')}_{start_time_right.strftime('%Y-%m-%d_%H-%M-%s')}_to_{end_time_right.strftime('%Y-%m-%d_%H-%M-%s')}_{delta_time_left}_{delta_time_right}.{save_plot_format}"
+            save_path = Path(save_folder)
+            save_path.mkdir(parents=True, exist_ok=True)
+            plt.savefig(
+                save_path / save_plot_name,
+                format=save_plot_format,
+                dpi=300,
+                bbox_inches="tight",
+                pad_inches=0.1,
+            )
+            plt.close()
