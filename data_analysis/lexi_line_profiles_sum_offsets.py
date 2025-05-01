@@ -5,9 +5,11 @@ from pathlib import Path
 
 import lexi_data_analysis_functions as lexi_functions
 import matplotlib as mpl
+import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy.ndimage import map_coordinates
 
 importlib.reload(lexi_functions)
 
@@ -138,7 +140,8 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
         origin="lower",
         aspect="auto",
         cmap="inferno",
-        norm=mpl.colors.LogNorm(vmin=1e-1, vmax=np.nanmax(hist)),
+        norm=mpl.colors.Normalize(vmin=10, vmax=50),
+        # norm=mpl.colors.Normalize(vmin=0, vmax=np.nanmax(hist)),
     )
     fig.colorbar(im, ax=ax1, label="Counts/s", pad=0.01, shrink=0.9, fraction=0.1)
     ax1.set_xlabel("X")
@@ -148,6 +151,11 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
     ax1.set_xlim(-0.1, 0.1)
     ax1.set_ylim(-0.1, 0.1)
 
+    # Add a  circle at the center of the histogram of radius 0.04
+    circle = patches.Circle(
+        (x_offset, y_offset), 0.04, color="lime", fill=False, linestyle="--", linewidth=1, zorder=20
+    )
+    # ax1.add_patch(circle)
     # x_centers = (xedges[:-1] + xedges[1:]) / 2
     # y_centers = (yedges[:-1] + yedges[1:]) / 2
 
@@ -312,7 +320,8 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
         alpha=1,
         s=2,
     )
-
+    # ax2b.set_ylim(100, 800)
+    ax2b.set_ylim(0.002, 0.013)
     # Select the values2 that are within 0.04 distance from the x_offset, y_offset
     values2_selected = []
     dist2_selected = []
@@ -322,21 +331,104 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
             values2_selected.append(value)
     # Get a best fit line for the selected values2
     if len(dist2_selected) > 0:
-        coeffs = np.polyfit(dist2_selected, values2_selected, 1)
+        """
+        # Fit a 1st-degree polynomial (line)
+        coeffs, residuals, _, _, _ = np.polyfit(dist2_selected, values2_selected, 1, full=True)
         poly_fit = np.poly1d(coeffs)
         x_fit = np.linspace(-0.04, 0.04, 100)
         y_fit = poly_fit(x_fit)
+
+        # In a csv file, save the slope, coeffs and residuals along with theta
+        best_fit_file = Path(f"../data/line_profile_best_fit_theta_offset_2042_2102_2d.csv")
+        best_fit_file.parent.mkdir(parents=True, exist_ok=True)
+        # Check if the file already exists
+        if best_fit_file.exists():
+            # Read the existing file
+            df = pd.read_csv(best_fit_file)
+            # Append the new data to the existing file
+            new_data = {
+                "theta": theta,
+                "slope": coeffs[0],
+                "intercept": coeffs[1],
+                "residuals": residuals[0],
+            }
+            # Add the new data to the DataFrame
+            df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
+            df.to_csv(best_fit_file, index=False)
+        else:
+            # Create a new DataFrame and save it to a CSV file
+            df = pd.DataFrame(
+                {
+                    "theta": [theta],
+                    "slope": [coeffs[0]],
+                    "intercept": [coeffs[1]],
+                    "residuals": [residuals[0]],
+                }
+            )
+            df.to_csv(best_fit_file, index=False)
+
         ax2b.plot(x_fit, y_fit, color="w", linestyle="--", linewidth=2)
         # Add the equation of the line to the plot right above the line
         ax2b.text(
             0.02,
             0.37,
-            f"y = {coeffs[0]:.3f}x + {coeffs[1]:.3f}",
+            f"y = {coeffs[0]:.3f}x + {coeffs[1]:.3f} \n residuals = {residuals[0]:.3f}",
             transform=ax2b.transAxes,
             fontsize=12,
             # Rotate the text by the slope of the line
             rotation=8,
             horizontalalignment="left",
+            verticalalignment="top",
+            bbox=dict(facecolor="k", alpha=0.5, edgecolor="none"),
+        )
+        """
+        # Fit a 2nd-degree polynomial (parabola)
+        coeffs, residuals, _, _, _ = np.polyfit(dist2_selected, values2_selected, 2, full=True)
+        poly_fit = np.poly1d(coeffs)
+        x_fit = np.linspace(-0.04, 0.04, 100)
+        y_fit = poly_fit(x_fit)
+
+        best_fit_file = Path(f"../data/line_profile_best_fit_theta_offset_2042_2102_2d.csv")
+        best_fit_file.parent.mkdir(parents=True, exist_ok=True)
+
+        if best_fit_file.exists():
+            df = pd.read_csv(best_fit_file)
+            new_data = {
+                "theta": theta,
+                "quadratic": coeffs[0],
+                "linear": coeffs[1],
+                "intercept": coeffs[2],
+                "residuals": residuals[0] if len(residuals) > 0 else np.nan,
+            }
+            df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
+            df.to_csv(best_fit_file, index=False)
+            # Drop the duplicate rows
+            df = df.drop_duplicates(subset=["theta"], keep="last")
+        else:
+            df = pd.DataFrame(
+                {
+                    "theta": [theta],
+                    "quadratic": [coeffs[0]],
+                    "linear": [coeffs[1]],
+                    "intercept": [coeffs[2]],
+                    "residuals": [residuals[0] if len(residuals) > 0 else np.nan],
+                }
+            )
+            df.to_csv(best_fit_file, index=False)
+
+        ax2b.plot(x_fit, y_fit, color="w", linestyle="--", linewidth=2)
+        ax2b.text(
+            0.99,
+            0.99,
+            (
+                f"y = {coeffs[0]:.3f}x² + {coeffs[1]:.3f}x + {coeffs[2]:.3f}\nresiduals = {residuals[0]:.2e}"
+                if len(residuals) > 0
+                else f"y = {coeffs[0]:.3f}x² + {coeffs[1]:.3f}x + {coeffs[2]:.3f}"
+            ),
+            transform=ax2b.transAxes,
+            fontsize=12,
+            rotation=0,
+            horizontalalignment="right",
             verticalalignment="top",
             bbox=dict(facecolor="k", alpha=0.5, edgecolor="none"),
         )
@@ -388,7 +480,8 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
     ax2.set_title(f"Line Profiles through ({x_offset}, {y_offset})")
 
     ax2.set_xlim(-0.04, 0.04)
-    ax2.set_ylim(0, 30)
+    # ax2.set_ylim(0, 30)
+    ax2.set_ylim(0.01, 0.05)
     ax2.set_yscale("linear")
 
     # ax2b.set_ylim(0, 0.014)
@@ -446,7 +539,7 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
     end_date_str = end_data.replace(":", "").replace("-", "").replace("T", "_")
     save_folder = Path(f"../figures/line_profiles_v2/{start_date_str}_{end_date_str}/")
     save_folder.mkdir(parents=True, exist_ok=True)
-    fig_name = f"normalized_sunset_single_linear_line_profile_theta_{save_theta}_offset_{x_offset:0.3f}_{y_offset:0.3f}.png"
+    fig_name = f"scaled_shifted_non_normalized_sunset_single_linear_line_profile_theta_{save_theta}_offset_{x_offset:0.3f}_{y_offset:0.3f}.png"
     # if theta >= 180:
     #     fig_name = "test2.png"
     # else:
@@ -461,8 +554,8 @@ def plot_line_profile(hist, xedges, yedges, theta, x_offset, y_offset, start_dat
 input_dict = {
     "x_key": "x_volt_lin",
     "y_key": "y_volt_lin",
-    "start_time": "2025-03-16T19:45:00Z",
-    "end_time": "2025-03-16T21:15:00Z",
+    "start_time": "2025-03-16T20:42:00Z",
+    "end_time": "2025-03-16T21:02:00Z",
     # "start_time": "2024-05-23T22:45:00Z",
     # "end_time": "2024-05-30T02:45:00Z",
     # "start_time": "2025-03-06T15:05:00Z",
@@ -470,24 +563,26 @@ input_dict = {
     "bins": 200,
     "bin_range": [-0.1, 0.1, -0.1, 0.1],
     "time_normalization": True,
+    "rotate_data": False,
+    "rotation_angle": -18.6,
 }
 
 
 read_data = False
 normalize_against_ground = True
 if "hist" not in locals() or "xedges" not in locals() or "yedges" not in locals() or read_data:
-    hist, xedges, yedges, ra_median, dec_median = lexi_functions.get_single_histogram_array(
+    org_hist, xedges, yedges, ra_median, dec_median = lexi_functions.get_single_histogram_array(
         **input_dict
     )
     # Save the histogram data to a pickle file along with start and end time
     save_folder = Path("../data/")
     save_folder.mkdir(parents=True, exist_ok=True)
-    file_name = f"line_profile_histogram_data_{input_dict['start_time'].replace(':', '').replace('-', '').replace('T', '_')}_{input_dict['end_time'].replace(':', '').replace('-', '').replace('T', '_')}.pkl"
+    file_name = f"line_profile_histogram_data_moon_coordinate_{input_dict['start_time'].replace(':', '').replace('-', '').replace('T', '_')}_{input_dict['end_time'].replace(':', '').replace('-', '').replace('T', '_')}.pkl"
     save_file = save_folder / file_name
     with open(save_file, "wb") as f:
         pickle.dump(
             {
-                "hist": hist,
+                "hist": org_hist,
                 "xedges": xedges,
                 "yedges": yedges,
                 "ra_median": ra_median,
@@ -503,21 +598,68 @@ if "hist" not in locals() or "xedges" not in locals() or "yedges" not in locals(
             f,
         )
 
-    print("Histogram data loaded successfully.")
-    if normalize_against_ground:
-        ground_file_name = (
-            "../data/ground_test_histogram_data_20240523_224500Z_20240530_024500Z.pkl"
-        )
-        with open(ground_file_name, "rb") as f:
-            ground_data = pickle.load(f)
-        ground_hist = ground_data["hist"]
-        # Replace 0 values in ground_hist with nan
-        ground_hist = np.where(ground_hist == 0, np.nan, ground_hist)
-        hist = hist / ground_hist
-    print("Histogram data normalized against ground data.")
+n_shift_bin_x = 0
+n_shift_bin_y = 0
+print("Histogram data loaded successfully.")
+if normalize_against_ground:
+    ground_file_name = "../data/ground_test_histogram_data_20240523_224500Z_20240530_024500Z.pkl"
+    with open(ground_file_name, "rb") as f:
+        ground_data = pickle.load(f)
+    ground_hist = ground_data["hist"]
+    # Replace 0 values in ground_hist with nan
+    ground_hist = np.where(ground_hist == 0, np.nan, ground_hist)
+
+    # Shift ground_hist n_shift_bin bins to the left
+    ground_hist = np.roll(ground_hist, shift=n_shift_bin_x, axis=0)  # y-direction
+    ground_hist = np.roll(ground_hist, shift=n_shift_bin_y, axis=1)  # x-direction
+
+    if n_shift_bin_y > 0:
+        ground_hist[:n_shift_bin_y, :] = np.nan
+    elif n_shift_bin_y < 0:
+        ground_hist[n_shift_bin_y:, :] = np.nan  # This works since negative indices wrap correctly
+
+    # Invalidate wrapped-around columns (x-direction)
+    if n_shift_bin_x > 0:
+        ground_hist[:, :n_shift_bin_x] = np.nan
+    elif n_shift_bin_x < 0:
+        ground_hist[:, n_shift_bin_x:] = np.nan
+
+    ny, nx = ground_hist.shape
+    xedges = ground_data["xedges"]
+    yedges = ground_data["yedges"]
+    x_grid, y_grid = np.meshgrid(xedges[:-1], yedges[:-1])
+
+    # Apply scaling to bin coordinates (rescale the coordinates by a factor of alpha)
+    alpha = 1.1
+    x_scaled = (x_grid - xedges[0]) * alpha + xedges[0]
+    y_scaled = (y_grid - yedges[0]) * alpha + yedges[0]
+
+    # Interpolate the histogram data to the scaled coordinates
+    rescaled_ground_hist = map_coordinates(
+        ground_hist,
+        [y_scaled.ravel(), x_scaled.ravel()],
+        order=1,
+        mode="nearest",
+        # cval=np.nan,
+    ).reshape(ny, nx)
+    # Normalize the histogram data against the ground data
+    hist = org_hist / ground_hist
+    rescaled_hist = org_hist / rescaled_ground_hist
+
+    # Replace inf values with nan
+    hist = np.where(np.isinf(hist), np.nan, hist)
+
+    rescaled_hist = np.where(np.isinf(rescaled_hist), np.nan, rescaled_hist)
+else:
+    hist = org_hist
+    # Replace 0 values in hist with nan
+    # hist = np.where(hist == 0, np.nan, hist)
+    # Replace inf values with nan
+    hist = np.where(np.isinf(hist), np.nan, hist)
+print("Histogram data normalized against ground data.")
 
 theta_list = np.linspace(0, 180, num=181, endpoint=True)
-theta_index = 12
+theta_index = 3
 
 # Find the maximum value in the histogram and its corresponding coordinates
 max_index = np.unravel_index(np.argmax(hist, axis=None), hist.shape)

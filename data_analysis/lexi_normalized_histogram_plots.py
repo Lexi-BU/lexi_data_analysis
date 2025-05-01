@@ -21,16 +21,16 @@ input_dict = {
     "y_key": "y_volt_lin",
     # "start_time": "2025-03-16T19:45:00Z",  # sun-set
     # "end_time": "2025-03-16T21:15:00Z",
-    # "start_time": "2024-05-23T22:45:00Z",
-    # "end_time": "2024-05-30T02:45:00Z",
+    "start_time": "2024-05-23T22:45:00Z",  # ground reference
+    "end_time": "2024-05-30T02:45:00Z",
     # "start_time": "2025-03-06T03:30:00Z",  # reference
     # "end_time": "2025-03-06T04:30:00Z",
     # "start_time": "2025-03-06T15:05:00Z",  # sco-x
     # "end_time": "2025-03-06T16:35:00Z",
     # "start_time": "2025-03-08T05:00:00Z",  # high solar wind
     # "end_time": "2025-03-08T05:30:00Z",
-    "start_time": "2025-03-06T013:30:00Z",
-    "end_time": "2025-03-06T15:50:00Z",
+    # "start_time": "2025-03-06T013:30:00Z",
+    # "end_time": "2025-03-06T15:50:00Z",
     "bins": 200,
     "bin_range": [-0.1, 0.1, -0.1, 0.1],
     "time_normalization": True,

@@ -289,6 +289,8 @@ def get_single_histogram_array(
     bin_range=None,
     time_normalization=True,
     mincnt=1,
+    rotate_data=False,
+    rotation_angle=0,
 ):
     """Get a single histogram array from a dataframe."""
 
@@ -328,6 +330,22 @@ def get_single_histogram_array(
     # Select the data for the specified time range
     x_data = df.loc[start_time:end_time, x_key].values
     y_data = df.loc[start_time:end_time, y_key].values
+
+    # Rotate the data if specified
+    if rotate_data:
+        # Convert the rotation angle to radians
+        rotation_angle_rad = np.deg2rad(rotation_angle)
+        # Create the rotation matrix
+        rotation_matrix = np.array(
+            [
+                [np.cos(rotation_angle_rad), -np.sin(rotation_angle_rad)],
+                [np.sin(rotation_angle_rad), np.cos(rotation_angle_rad)],
+            ]
+        )
+        # Rotate the data
+        rotated_data = np.dot(np.column_stack((x_data, y_data)), rotation_matrix)
+        x_data = - rotated_data[:, 0]
+        y_data = - rotated_data[:, 1]
 
     # Get the histogram array
     hist, xedges, yedges = np.histogram2d(
@@ -824,6 +842,7 @@ def plot_histograms(
                 save_plot_name = f"single_histogram_{x_key}_{y_key}_{start_time_left.strftime('%Y-%m-%d_%H-%M-%s')}_to_{end_time_left.strftime('%Y-%m-%d_%H-%M-%s')}_{start_time_right.strftime('%Y-%m-%d_%H-%M-%s')}_to_{end_time_right.strftime('%Y-%m-%d_%H-%M-%s')}_{delta_time_left}_{delta_time_right}.{save_plot_format}"
             save_path = Path(save_folder)
             save_path.mkdir(parents=True, exist_ok=True)
+            print(f"Saving plot to {save_path / save_plot_name}")
             plt.savefig(
                 save_path / save_plot_name,
                 format=save_plot_format,
