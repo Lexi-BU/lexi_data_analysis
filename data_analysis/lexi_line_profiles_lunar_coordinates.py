@@ -288,31 +288,11 @@ def plot_line_profile(
             # yi][0], y_perp_line[xi, yi][0], f"{sum(perp_value[xi, yi]):.1f}", color="cyan",
             #     fontsize=5, ha="center", va="bottom", )
 
-    # Plot primary line profile (left axis)
-    ax2.scatter(
-        np.array(dist1)[mask],
-        np.array(values1)[mask],
-        color="lime",
-        marker="d",
-        label=f"θ={theta}°",
-        alpha=1,
-        s=5,
-    )
     # At each point, write down the hist value beside it for dist, value in zip(
     # np.array(dist1)[mask], np.array(values1)[mask], ): ax2.text( dist, value, f"{value:.1f}",
     #     color="lime", fontsize=5, ha="left", va="bottom", )
-    ax2b = ax2.twinx()
-    ax2b.scatter(
-        dist2,
-        values2,
-        color="red",
-        marker=".",
-        label="Perpendicular Values",
-        alpha=1,
-        s=2,
-    )
-    ax2b.set_ylim(0, 500)
-    # ax2b.set_ylim(0.002, 0.013) Select the values2 that are within 0.04 distance from the x_offset,
+
+    # ax2.set_ylim(0.002, 0.013) Select the values2 that are within 0.04 distance from the x_offset,
     # y_offset
     values2_selected = []
     dist2_selected = []
@@ -320,14 +300,39 @@ def plot_line_profile(
         if abs(dist) <= 0.04:
             dist2_selected.append(dist)
             values2_selected.append(value)
-    # Get a best fit line for the selected values2
+
+    # Scale the dist2_selected from -0.04 to 0.04 to 0 to 9.1
+    dist2_selected = np.array(dist2_selected)
+    dist2_scaled = (dist2_selected + 0.04) / (0.08) * 9.1
+    dist2_selected = dist2_scaled
+
+    # Scale the values2_selected depedning on the maximum value of values2_selected
+    max_value = np.nanmax(values2_selected)
+    if max_value > 0:
+        values2_selected_scaled = np.array(values2_selected) / max_value
+    else:
+        values2_selected_scaled = np.array(values2_selected)
+
+    values2_selected = values2_selected_scaled
+
+    ax2.scatter(
+        dist2_selected,
+        values2_selected,
+        color="lime",
+        marker=".",
+        label="Perpendicular Values",
+        alpha=1,
+        s=2,
+    )
+
+    # ax2.set_ylim(0, 500) Get a best fit line for the selected values2
     if len(dist2_selected) > 0:
 
         if normalize_against_ground:
             # Fit a 1st-degree polynomial (line)
             coeffs, residuals, _, _, _ = np.polyfit(dist2_selected, values2_selected, 1, full=True)
             poly_fit = np.poly1d(coeffs)
-            x_fit = np.linspace(-0.04, 0.04, 100)
+            x_fit = np.linspace(0, 9.1, 100)  # Updated x_fit range
             y_fit = poly_fit(x_fit)
 
             # In a csv file, save the slope, coeffs and residuals along with theta
@@ -359,13 +364,13 @@ def plot_line_profile(
                 )
                 df.to_csv(best_fit_file, index=False)
 
-            ax2b.plot(x_fit, y_fit, color="w", linestyle="--", linewidth=2)
+            ax2.plot(x_fit, y_fit, color="w", linestyle="--", linewidth=2)
             # Add the equation of the line to the plot right above the line
-            ax2b.text(
+            ax2.text(
                 0.99,
                 0.99,
                 f"y = {coeffs[0]:.3f}x + {coeffs[1]:.3f} \n residuals = {residuals[0]:.3f}",
-                transform=ax2b.transAxes,
+                transform=ax2.transAxes,
                 fontsize=12,
                 # Rotate the text by the slope of the line
                 rotation=0,
@@ -377,7 +382,8 @@ def plot_line_profile(
             # Fit a 2nd-degree polynomial (parabola)
             coeffs, residuals, _, _, _ = np.polyfit(dist2_selected, values2_selected, 2, full=True)
             poly_fit = np.poly1d(coeffs)
-            x_fit = np.linspace(-0.04, 0.04, 100)
+            # x_fit = np.linspace(-0.04, 0.04, 100)
+            x_fit = np.linspace(0, 9.1, 100)
             y_fit = poly_fit(x_fit)
 
             best_fit_file = Path(f"../data/line_profile_best_fit_theta_offset_2042_2102_2d.csv")
@@ -408,8 +414,8 @@ def plot_line_profile(
                 )
                 df.to_csv(best_fit_file, index=False)
 
-            ax2b.plot(x_fit, y_fit, color="w", linestyle="--", linewidth=2)
-            ax2b.text(
+            ax2.plot(x_fit, y_fit, color="w", linestyle="--", linewidth=2)
+            ax2.text(
                 0.99,
                 0.99,
                 (
@@ -417,7 +423,7 @@ def plot_line_profile(
                     if len(residuals) > 0
                     else f"y = {coeffs[0]:.3f}x² + {coeffs[1]:.3f}x + {coeffs[2]:.3f}"
                 ),
-                transform=ax2b.transAxes,
+                transform=ax2.transAxes,
                 fontsize=12,
                 rotation=0,
                 horizontalalignment="right",
@@ -425,11 +431,10 @@ def plot_line_profile(
                 bbox=dict(facecolor="k", alpha=0.5, edgecolor="none"),
             )
 
-    # for dist, value in zip(dist2, values2): ax2b.text( dist, value, f"{value:.1f}", color="red",
-    #     fontsize=5, ha="left", va="bottom", )
-    ax2.set_xlabel("Distance from (x_offset, y_offset) along the line")
-    ax2.set_ylabel("Histogram Value", color="lime")
-    ax2.tick_params(axis="y", labelcolor="lime")
+    # for dist, value in zip(dist2, values2): ax2.text( dist, value, f"{value:.1f}", color="red",
+    #     fontsize=5, ha="left", va="bottom", ) ax2.set_xlabel("Distance from (x_offset, y_offset)
+    # along the line")
+    ax2.set_xlabel("Relative look direction latitude [0 to 9]")
 
     # At top left of the plot, display the sum_values1 and the theta ax2.text( 0.02, 0.98, f"Sum
     # counts: {sum_values1:.3f}\nθ={theta:.1f}°", transform=ax2.transAxes, fontsize=10,
@@ -437,10 +442,8 @@ def plot_line_profile(
     #     ax2.minor_ticks_on(a)
     ax2.grid(axis="both", which="major", linestyle="-", linewidth=0.5, alpha=0.5)
     ax2.grid(axis="both", which="minor", linestyle=":", linewidth=0.1, alpha=0.5)
-    ax2b.grid(axis="both", which="major", linestyle=":", linewidth=0.1, alpha=0.5)
-    ax2b.grid(axis="both", which="minor", linestyle=":", linewidth=0.1, alpha=0.5)
-    ax2b.set_ylabel("Perpendicular Histogram Value", color="red")
-    ax2b.tick_params(axis="y", labelcolor="red")
+    ax2.set_ylabel("Scaled x-ray counts", color="lime")
+    ax2.tick_params(axis="y", labelcolor="lime")
     # Set the number of minor ticks
     ax2.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(5))
     ax2.yaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(5))
@@ -451,17 +454,17 @@ def plot_line_profile(
 
     # Combine legends
     lines, labels = ax2.get_legend_handles_labels()
-    lines2, labels2 = ax2b.get_legend_handles_labels()
-    ax2.legend(lines + lines2, labels + labels2, loc="upper left", fontsize=8)
+    # lines2, labels2 = ax2.get_legend_handles_labels()
+    ax2.legend(lines, labels, loc="upper left", fontsize=8)
 
     ax2.set_title(f"Line Profiles through ({x_offset}, {y_offset})")
 
-    ax2.set_xlim(-0.04, 0.04)
-    ax2.set_ylim(12, 30)
-    # ax2.set_ylim(0.01, 0.05)
+    # ax2.set_xlim(-0.04, 0.04)
+    ax2.set_xlim(0, 9.1)
+    # ax2.set_ylim(0, 500) ax2.set_ylim(0, 1) ax2.set_ylim(0.01, 0.05)
     ax2.set_yscale("linear")
 
-    # ax2b.set_ylim(0, 0.014) ax2.set_yscale("linear") Set the maximum number of ticks for both axes
+    # ax2.set_ylim(0, 0.014) ax2.set_yscale("linear") Set the maximum number of ticks for both axes
     # to avoid clutter
     ax1.xaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
     ax1.yaxis.set_major_locator(mpl.ticker.MaxNLocator(5))
@@ -486,26 +489,15 @@ def plot_line_profile(
             top=True,
             bottom=True,
         )
-    ax2b.tick_params(
-        which="both",
-        direction="in",
-        length=6,
-        width=0.5,
-        colors="red",
-        grid_color="c",
-        left=False,
-        right=True,
-        top=True,
-        bottom=True,
-    )
+
     # Set the spine color to match the line color
-    ax2b.spines["left"].set_color("lime")
+    ax2.spines["left"].set_color("lime")
     # Set the tick labels color to match the line color on the left axis, for ax2
     ax2.tick_params(axis="y", colors="lime")
 
-    # ax2b.spines["bottom"].set_color("lime") Set the tick labels color to match the line color
-    # ax2b.tick_params(axis="y", colors="lime")
-    ax2b.spines["right"].set_color("red")
+    # ax2.spines["bottom"].set_color("lime") Set the tick labels color to match the line color
+    # ax2.tick_params(axis="y", colors="lime")
+    ax2.spines["right"].set_color("white")
     plt.tight_layout()
 
     save_theta = np.round(theta, 1)

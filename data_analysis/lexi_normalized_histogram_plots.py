@@ -16,6 +16,8 @@ warnings.filterwarnings("ignore", category=UserWarning, module="matplotlib")
 np.seterr(divide="ignore", invalid="ignore")
 
 
+rot_angle = 13.7  # rotation angle in degrees
+
 input_dict = {
     "x_key": "x_volt_lin",
     "y_key": "y_volt_lin",
@@ -34,6 +36,8 @@ input_dict = {
     "bins": 200,
     "bin_range": [-0.1, 0.1, -0.1, 0.1],
     "time_normalization": True,
+    "rotate_data": True,
+    "rotation_angle": rot_angle,
 }
 
 input_dict_2 = {
@@ -44,6 +48,8 @@ input_dict_2 = {
     "bins": 200,
     "bin_range": [-0.1, 0.1, -0.1, 0.1],
     "time_normalization": True,
+    "rotate_data": True,
+    "rotation_angle": rot_angle,
 }
 
 normalize_against_ground = True
@@ -57,7 +63,7 @@ if old_start_time != input_dict["start_time"] or old_end_time != input_dict["end
     read_data = True
 else:
     read_data = False
-
+read_data = True
 if read_data:
     org_hist, org_xedges, org_yedges, org_ra_median, org_dec_median = (
         lexi_functions.get_single_histogram_array(**input_dict)
@@ -65,7 +71,7 @@ if read_data:
     # Save the histogram data to a pickle file along with start and end time
     save_folder = Path("../data/")
     save_folder.mkdir(parents=True, exist_ok=True)
-    file_name = f"line_profile_histogram_data_{input_dict['start_time'].replace(':', '').replace('-', '').replace('T', '_')}_{input_dict['end_time'].replace(':', '').replace('-', '').replace('T', '_')}.pkl"
+    file_name = f"line_profile_histogram_data_{input_dict['start_time'].replace(':', '').replace('-', '').replace('T', '_')}_{input_dict['end_time'].replace(':', '').replace('-', '').replace('T', '_')}_rot_angle_{rot_angle}.pkl"
     save_file = save_folder / file_name
     with open(save_file, "wb") as f:
         pickle.dump(
@@ -82,6 +88,7 @@ if read_data:
                 "time_normalization": input_dict["time_normalization"],
                 "x_key": input_dict["x_key"],
                 "y_key": input_dict["y_key"],
+                "rotation_angle": input_dict["rotation_angle"],
             },
             f,
         )
@@ -91,7 +98,7 @@ if read_data:
         # Save the histogram data to a pickle file along with start and end time
         save_folder = Path("../data/")
         save_folder.mkdir(parents=True, exist_ok=True)
-        file_name = f"ground_histogram_data_{input_dict_2['start_time'].replace(':', '').replace('-', '').replace('T', '_')}_{input_dict_2['end_time'].replace(':', '').replace('-', '').replace('T', '_')}.pkl"
+        file_name = f"ground_histogram_data_{input_dict_2['start_time'].replace(':', '').replace('-', '').replace('T', '_')}_{input_dict_2['end_time'].replace(':', '').replace('-', '').replace('T', '_')}_rot_angle_{rot_angle}.pkl"
         save_file = save_folder / file_name
         # Check if the file already exists
         if save_file.exists():
@@ -122,6 +129,7 @@ if read_data:
                         "time_normalization": input_dict_2["time_normalization"],
                         "x_key": input_dict_2["x_key"],
                         "y_key": input_dict_2["y_key"],
+                        "rotation_angle": input_dict_2["rotation_angle"],
                     },
                     f,
                 )
@@ -146,7 +154,7 @@ lexi_functions.plot_histograms(
     end_time_right=input_dict_2["end_time"],
     delta_time_left=1,
     delta_time_right=1,
-    save_folder="../figures/histogram_normalized_diff/single_histogram/",
+    save_folder="../figures/histogram_normalized_diff/single_histogram/rotated/",
     save_plot_name=f"histogram_{input_dict['x_key']}_{input_dict['y_key']}_{input_dict['start_time'].replace(':', '').replace('-', '').replace('T', '_')}_{input_dict['end_time'].replace(':', '').replace('-', '').replace('T', '_')}_normalized.png",
     save_plot=True,
     color_map_center="RdBu",
@@ -155,5 +163,7 @@ lexi_functions.plot_histograms(
 
 old_start_time = input_dict["start_time"]
 old_end_time = input_dict["end_time"]
+old_rot_angle = input_dict["rotation_angle"]
+
 print("Plot saved successfully.")
 print("\a")
