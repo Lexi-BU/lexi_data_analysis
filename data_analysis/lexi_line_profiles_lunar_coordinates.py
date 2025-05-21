@@ -24,7 +24,7 @@ def get_histogram_values_along_line_both_directions(
     """
     Extract values from a 2D histogram along a specified line in both directions. Parameters: - hist:
     2D numpy array of histogram values - xedges, yedges: Bin edges for x and y dimensions - theta:
-    Angle in degrees (0 is horizontal, 90 is vertical) - x_offset, y_offset: Point that the line must
+    Angle in ° (0 is horizontal, 90 is vertical) - x_offset, y_offset: Point that the line must
     pass through Returns: - x_line: X coordinates of the line - y_line: Y coordinates of the line -
     distance: Distances from (x_offset, y_offset) along the line - value: Histogram values along the
     line
@@ -146,17 +146,29 @@ def plot_line_profile(
         hist.T,
         extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]],
         origin="lower",
-        aspect="auto",
+        aspect="equal",
         cmap="inferno",
         norm=norm,
     )
     fig.colorbar(im, ax=ax1, label="Counts/s", pad=0.01, shrink=0.9, fraction=0.1)
-    ax1.set_xlabel("X")
-    ax1.set_ylabel("Y")
+    ax1.set_xlabel("Altitude [°]", fontsize=14)
+    ax1.set_ylabel("Azimuth [°]", fontsize=14)
     ax1.set_title("Normalized 2D Histogram with Line\n" "histogram/ground histogram")
 
-    ax1.set_xlim(-0.1, 0.1)
-    ax1.set_ylim(-0.1, 0.1)
+    ax1.set_xlim(-0.04, 0.04)
+    ax1.set_ylim(-0.04, 0.04)
+
+    tick_positions = np.linspace(-0.04, 0.04, 5)
+
+    # Corresponding labels from 0 to 9
+    tick_labels = np.linspace(0, 9, 5).astype(int).astype(str)
+
+    # Apply to both axes
+    ax1.set_xticks(tick_positions)
+    ax1.set_xticklabels(tick_labels)
+
+    ax1.set_yticks(tick_positions)
+    ax1.set_yticklabels(tick_labels)
 
     # Add a  circle at the center of the histogram of radius 0.04
     circle = patches.Circle(
@@ -231,16 +243,16 @@ def plot_line_profile(
     ax1.plot(x_line, y_line, color="green", linestyle="--", linewidth=1)
     ax1.plot(x_offset, y_offset, "ko", markersize=4)  # Mark the offset point
 
-    # Add the value of alpha in the left corner of the plot
+    # Add the value of rotation angle to the plot
     ax1.text(
-        0.02,
-        0.98,
-        f"Scaling factor: {alpha:.2f}",
+        0.01,
+        0.99,
+        f"θ={theta:.1f}°\nSum counts: {sum_values1:.3f}",
         transform=ax1.transAxes,
-        color="white",
-        fontsize=10,
-        ha="left",
-        va="top",
+        fontsize=12,
+        rotation=0,
+        horizontalalignment="left",
+        verticalalignment="top",
         bbox=dict(facecolor="k", alpha=0.5, edgecolor="none"),
     )
     # Put a marker at 0.1 distance from the line in the direction of the line
@@ -309,7 +321,7 @@ def plot_line_profile(
     # Scale the values2_selected depedning on the maximum value of values2_selected
     max_value = np.nanmax(values2_selected)
     if max_value > 0:
-        values2_selected_scaled = np.array(values2_selected) / max_value
+        values2_selected_scaled = np.array(values2_selected)  # / max_value
     else:
         values2_selected_scaled = np.array(values2_selected)
 
@@ -434,7 +446,7 @@ def plot_line_profile(
     # for dist, value in zip(dist2, values2): ax2.text( dist, value, f"{value:.1f}", color="red",
     #     fontsize=5, ha="left", va="bottom", ) ax2.set_xlabel("Distance from (x_offset, y_offset)
     # along the line")
-    ax2.set_xlabel("Relative look direction latitude [0 to 9]")
+    ax2.set_xlabel("Relative look direction latitude (0 to 9) [°]", fontsize=14)
 
     # At top left of the plot, display the sum_values1 and the theta ax2.text( 0.02, 0.98, f"Sum
     # counts: {sum_values1:.3f}\nθ={theta:.1f}°", transform=ax2.transAxes, fontsize=10,
@@ -461,7 +473,9 @@ def plot_line_profile(
 
     # ax2.set_xlim(-0.04, 0.04)
     ax2.set_xlim(0, 9.1)
-    # ax2.set_ylim(0, 500) ax2.set_ylim(0, 1) ax2.set_ylim(0.01, 0.05)
+    ax2.set_ylim(0, 600)
+    # ax2.set_ylim(0, 1)
+    #  ax2.set_ylim(0.01, 0.05)
     ax2.set_yscale("linear")
 
     # ax2.set_ylim(0, 0.014) ax2.set_yscale("linear") Set the maximum number of ticks for both axes
@@ -507,16 +521,53 @@ def plot_line_profile(
 
     if rot_angle:
         save_folder = Path(
-            f"../figures/line_profiles_v2/{start_date_str}_{end_date_str}/{rot_angle}/"
+            f"../figures/line_profiles/lunar_coordinate/{start_date_str}_{end_date_str}/{rot_angle}/"
         )
     else:
-        save_folder = Path(f"../figures/line_profiles_v2/{start_date_str}_{end_date_str}/")
+        save_folder = Path(
+            f"../figures/line_profiles/lunar_coordinate/{start_date_str}_{end_date_str}/"
+        )
     save_folder.mkdir(parents=True, exist_ok=True)
     fig_name = f"{alpha:0.2f}_scaled_{normalize_against_ground}_shifted_normalized_sunset_single_linear_line_profile_theta_{save_theta}_offset_{x_offset:0.3f}_{y_offset:0.3f}.png"
     fig.savefig(save_folder / fig_name, dpi=300, bbox_inches="tight", pad_inches=0.1)
+
+    # print(f"Line profile plot saved to {save_folder / fig_name}")
     # print(f"Line profile plot saved to {save_folder / fig_name}")
 
     plt.close(fig)
+
+    # Open a csv file and save the values of theta, sum_values1, perp_value and perp_dist, slope, # intercept
+    # and residuals
+    # Save the values to a csv file
+    # best_fit_file = Path(f"../data/line_profile_best_fit_theta_offset_2042_2102_2d.csv")
+    # best_fit_file.parent.mkdir(parents=True, exist_ok=True)
+    # # Check if the file already exists
+    # if best_fit_file.exists():
+    #     # print(f"Best fit file already exists: {best_fit_file}")
+    #     # Read the existing file
+    #     df = pd.read_csv(best_fit_file)
+    #     # Append the new data to the existing file
+    #     new_data = {
+    #         "theta": theta,
+    #         "sum_values1": sum_values1,
+    #         "perp_value": perp_value,
+    #         "perp_dist": perp_dist,
+    #     }
+    #     # Add the new data to the DataFrame
+    #     df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
+    #     df.to_csv(best_fit_file, index=False)
+    # else:
+    #     # Create a new DataFrame and save it to a CSV file
+    #     df = pd.DataFrame(
+    #         {
+    #             "theta": [theta],
+    #             "sum_values1": [sum_values1],
+    #             "perp_value": [perp_value],
+    #             "perp_dist": [perp_dist],
+    #         }
+    #     )
+    #     df.to_csv(best_fit_file, index=False)
+
     return theta, sum_values1, perp_value, perp_dist
 
 
@@ -655,9 +706,9 @@ for alpha in alpha_list:
     sum_values = []
     start_date = input_dict["start_time"]
     end_date = input_dict["end_time"]
-    for theta in theta_list[theta_index : theta_index + 1]:
+    for theta in theta_list[theta_index:]:
         # for theta in theta_list:
-        print(f"Processing line profile for theta = {theta:0.2f} degrees", end="\r")
+        print(f"Processing line profile for theta = {theta:0.2f} °", end="\r")
         # Ensure the histogram is loaded
         if "hist" not in locals():
             hist, xedges, yedges, ra_median, dec_median = lexi_functions.get_single_histogram_array(

@@ -545,7 +545,7 @@ input_dict = {
 
 
 read_data = False
-normalize_against_ground = True
+normalize_against_ground = False
 if "hist" not in locals() or "xedges" not in locals() or "yedges" not in locals() or read_data:
     org_hist, xedges, yedges, ra_median, dec_median = lexi_functions.get_single_histogram_array(
         **input_dict

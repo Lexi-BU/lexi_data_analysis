@@ -3,6 +3,8 @@ import glob
 import importlib
 from pathlib import Path
 
+import matplotlib.dates as mdates
+
 # import lexi_data_analysis_functions as lexi_functions
 import matplotlib.pyplot as plt
 import numpy as np
@@ -215,13 +217,22 @@ for plot_start_time, plot_end_time in zip(plot_start_time_list, plot_end_time_li
         selected_merged_df["dec_lexi"],
         label="Dec",
         color="c",
-        s=1,
+        marker="o",
+        s=5,
         alpha=1,
     )
+    ax[1].set_ylim(12, 16)
     twin_ax = ax[1].twinx()
     twin_ax.scatter(
-        selected_merged_df.index, selected_merged_df["ra_lexi"], label="RA", color="m", s=1, alpha=1
+        selected_merged_df.index,
+        selected_merged_df["ra_lexi"],
+        label="RA",
+        color="m",
+        marker=".",
+        s=1,
+        alpha=0.2,
     )
+    twin_ax.set_ylim(14, 17)
     ax[1].set_ylabel("Dec", color="c")
     twin_ax.set_ylabel("RA", color="m")
 
@@ -236,7 +247,10 @@ for plot_start_time, plot_end_time in zip(plot_start_time_list, plot_end_time_li
     twin_ax.tick_params(axis="y", colors="m")
 
     # Set the x-axis label
-    ax[1].set_xlabel("Time")
+    ax[1].set_xlabel(f"Time on {selected_merged_df.index.min().strftime('%Y-%m-%d')} [UTC]")
+    # Set the x-axis major locator and formatter
+    ax[1].xaxis.set_major_locator(mdates.MinuteLocator(interval=30))
+    ax[1].xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
 
     # Set the title
     fig.suptitle(f"LEXI Data from {plot_start_time} to {plot_end_time}")
