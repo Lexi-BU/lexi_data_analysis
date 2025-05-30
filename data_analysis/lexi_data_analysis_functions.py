@@ -67,7 +67,7 @@ def read_all_data_files(
 
     for i, file in enumerate(file_list):
         try:
-            print(f"Reading file number {i + 1} of {len(file_list)}", end="\r")
+            # print(f"Reading file number {i + 1} of {len(file_list)}", end="\r")
             dat = cdf(file)
             # Get the list of variables in the file
             variables = dat.keys()
@@ -105,7 +105,7 @@ def read_all_data_files(
         df = df[~df.index.duplicated(keep="first")]
         # Select only rows that are within the time range
         df = df.loc[start_time:end_time]
-        print("\n")
+        # print("\n")
         # Convert the index to datetime
         return df
     elif return_data_type == "dict":

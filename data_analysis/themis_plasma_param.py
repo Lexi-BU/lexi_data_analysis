@@ -4,8 +4,8 @@ import pandas as pd
 import pyspedas
 from pytplot import get_data
 
-time_range = ["2025-03-06", "2025-03-10"]
-sc = "b"  # Denotes which THEMIS probe to load data from
+time_range = ["2025-03-16", "2025-03-17"]
+sc = "c"  # Denotes which THEMIS probe to load data from
 
 
 # Electrostatic Analyzer Reduced mode - 3sec resolution, low angular resolution
@@ -91,6 +91,33 @@ for var in vector_vars:
 df = pd.concat(series_list, axis=1)
 df.sort_index(inplace=True)
 
+# Get the magnitude of the velocity vectors (peir, peif, peib)
+df["th" + sc + "_peir_velocity_magnitude"] = (
+    df["th" + sc + "_peir_velocity_gse_x"] ** 2
+    + df["th" + sc + "_peir_velocity_gse_y"] ** 2
+    + df["th" + sc + "_peir_velocity_gse_z"] ** 2
+) ** 0.5
+df["th" + sc + "_peif_velocity_magnitude"] = (
+    df["th" + sc + "_peif_velocity_gse_x"] ** 2
+    + df["th" + sc + "_peif_velocity_gse_y"] ** 2
+    + df["th" + sc + "_peif_velocity_gse_z"] ** 2
+) ** 0.5
+df["th" + sc + "_peib_velocity_magnitude"] = (
+    df["th" + sc + "_peib_velocity_gse_x"] ** 2
+    + df["th" + sc + "_peib_velocity_gse_y"] ** 2
+    + df["th" + sc + "_peib_velocity_gse_z"] ** 2
+) ** 0.5
+
+# Get the solar wind flux for the three species
+df["th" + sc + "_peir_flux"] = (
+    df["th" + sc + "_peir_density"] * df["th" + sc + "_peir_velocity_magnitude"]
+)
+df["th" + sc + "_peif_flux"] = (
+    df["th" + sc + "_peif_density"] * df["th" + sc + "_peif_velocity_magnitude"]
+)
+df["th" + sc + "_peib_flux"] = (
+    df["th" + sc + "_peib_density"] * df["th" + sc + "_peib_velocity_magnitude"]
+)
 # Save to CSV
-csv_filename = f"themis_{sc}_esa_parameters_{time_range[0]}_to_{time_range[1]}.csv"
+csv_filename = f"themis_{sc}_esa_parameters_{time_range[0]}_to_{time_range[1]}_flux.csv"
 df.to_csv(csv_filename)

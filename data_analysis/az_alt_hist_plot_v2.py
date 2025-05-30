@@ -9,9 +9,7 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from scipy.ndimage import map_coordinates
+from matplotlib.cm import get_cmap
 
 importlib.reload(lexi_functions)
 
@@ -109,7 +107,7 @@ new_yedges = ground_yedges * 112.5 + 4.5  # Scale to 0-9 degrees
 scaled_radius = 0.04 * 112.5
 scaled_x_centers = xcenters * 112.5 + 4.5
 scaled_y_centers = ycenters * 112.5 + 4.5
-y_list = np.linspace(-0.039, 0.039, 5)
+y_list = np.linspace(-0.039, 0.039, 10)
 scaled_y_list = y_list * 112.5 + 4.5  # Scale to 0-9 range
 m_rows = 6
 offset = m_rows // 2
@@ -118,9 +116,9 @@ offset = m_rows // 2
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
 
 # First subplot: 2D Histogram
-plt.style.use("dark_background")
-cmap = mpl.colormaps["inferno"]
-cmap.set_bad(color="black")  # Set NaN values to white
+plt.style.use("default")
+cmap = mpl.colormaps["plasma"]  # Use the plasma colormap
+cmap.set_bad(color="white")  # Set NaN values to white
 # norm = mpl.colors.LogNorm(vmin=np.nanmin(hist_masked[hist_masked > 0]), vmax=np.nanmax(hist_masked))
 norm = mpl.colors.LogNorm(vmin=1, vmax=1e4)
 
@@ -164,38 +162,51 @@ ax1.set_ylim(0, 9)
 center_x, center_y = 4.5, 4.5
 scaled_y_list = scaled_y_list.tolist()
 # Add horizontal lines for each y in y_list
-for y in scaled_y_list:
-    # Check if this y-coordinate is within the circle's bounds
-    if abs(y - center_y) <= scaled_radius:
-        dx = np.sqrt(scaled_radius**2 - (y - center_y) ** 2)  # Half-length of chord
-        x_start = center_x - dx
-        x_end = center_x + dx
-        ax1.plot([x_start, x_end], [y, y], color="k", linestyle=":", alpha=1)
+# for y in scaled_y_list:
+#     # Check if this y-coordinate is within the circle's bounds
+#     if abs(y - center_y) <= scaled_radius:
+#         dx = np.sqrt(scaled_radius**2 - (y - center_y) ** 2)  # Half-length of chord
+#         x_start = center_x - dx
+#         x_end = center_x + dx
+#         ax1.plot([x_start, x_end], [y, y], color="k", linestyle=":", alpha=1)
 
 # Second subplot: Line profiles
 scaled_x_centers = xcenters * 112.5 + 4.5
 
+cmap = mpl.colormaps["bone"]
+colors = [cmap(i / (len(y_list) - 1)) for i in range(len(y_list))]
 
-# Plot line profiles for each y in y_list (using same y_list as above)
-for i, y in enumerate(y_list):
+for i, (y, color) in enumerate(zip(y_list, colors)):
     y_bin_index = np.argmin(np.abs(ycenters - y))
     y_start = max(0, y_bin_index - offset)
-    y_end = min(len(ycenters) - 1, y_bin_index + offset)
+    y_end = min(len(ycenters), y_bin_index + offset + 1)
+
     hist_slice = hist_masked[y_start:y_end, :].mean(axis=0)
-    # Get 5 point running average of hist_slice
+    # Normalize the histogram slice
+    hist_slice = hist_slice / np.nanmax(hist_slice)
     hist_slice = (
         pd.Series(hist_slice).rolling(window=6, center=True, min_periods=1).mean().to_numpy()
     )
-    ax2.plot(scaled_x_centers, hist_slice, label=f"{scaled_y_list[i]:.1f}°", marker=None)
-    # On the first plot, plot a strip of m_rows bins wide
+
+    # Plot line profile on ax2
+    ax2.plot(scaled_x_centers, hist_slice, label=f"{scaled_y_list[i]:.1f}°", color=color)
+
+    # Plot corresponding horizontal line on ax1
+    if abs(scaled_y_list[i] - center_y) <= scaled_radius:
+        dx = np.sqrt(scaled_radius**2 - (scaled_y_list[i] - center_y) ** 2)
+        x_start = center_x - dx
+        x_end = center_x + dx
+        ax1.plot([x_start, x_end], [scaled_y_list[i]] * 2, color=color, linestyle=":", alpha=1)
+
+    # Optional: highlight the region (m_rows bins)
     ax1.fill_betweenx(
-        [scaled_y_centers[y_start], scaled_y_centers[y_end]],
+        [scaled_y_centers[y_start], scaled_y_centers[y_end - 1]],
         scaled_x_centers[0],
         scaled_x_centers[-1],
-        color="gray",
-        alpha=0.3,
-        # label=f"y = {scaled_y_list[i]:.1f}°",
+        color="k",
+        alpha=0.1,
     )
+
 
 # Set labels and title
 ax2.set_xlabel("Altitude (degrees)", fontsize=14)
