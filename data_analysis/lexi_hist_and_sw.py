@@ -248,6 +248,28 @@ def plot_themis_lexi_hist_time_series(
 
     # Get the correlation coefficient between THEMIS flux and LEXI histogram sum
     if sw_flux is not None and hist_sum is not None:
+        # select the data only between the start and end time
+        sw_flux = sw_flux[(time_series >= start_time) & (time_series <= end_time)]
+        hist_sum = hist_sum[(time_series >= start_time) & (time_series <= end_time)]
+        # Calculate the Pearson correlation coefficient
+        if len(sw_flux) == 0 or len(hist_sum) == 0:
+            print("No data available for correlation calculation.")
+            correlation = np.nan
+            spearman_correlation = np.nan
+        elif len(sw_flux) != len(hist_sum):
+            print(
+                "Warning: The length of sw_flux and hist_sum are not equal. "
+                "Correlation calculation may not be accurate."
+            )
+            min_length = min(len(sw_flux), len(hist_sum))
+            sw_flux = sw_flux[:min_length]
+            hist_sum = hist_sum[:min_length]
+        else:
+            # Calculate the Pearson correlation coefficient
+            if np.all(np.isnan(sw_flux)) or np.all(np.isnan(hist_sum)):
+                print("All values are NaN, cannot calculate correlation.")
+                correlation = np.nan
+                spearman_correlation = np.nan
         correlation = np.corrcoef(sw_flux, hist_sum)[0, 1]
         # Get the spearman correlation
         spearman_correlation = stats.spearmanr(sw_flux, hist_sum).correlation
@@ -287,7 +309,7 @@ end_time = "2025-03-16T21:10:00Z"
 
 # Get the THEMIS and LEXI histogram data in 1 minute intervals
 freq = "1min"
-themis_sc = "b"
+themis_sc = "c"
 
 recompute_data = False
 if recompute_data:

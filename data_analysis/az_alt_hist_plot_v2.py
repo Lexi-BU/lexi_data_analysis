@@ -107,7 +107,7 @@ new_yedges = ground_yedges * 112.5 + 4.5  # Scale to 0-9 degrees
 scaled_radius = 0.04 * 112.5
 scaled_x_centers = xcenters * 112.5 + 4.5
 scaled_y_centers = ycenters * 112.5 + 4.5
-y_list = np.linspace(-0.039, 0.039, 10)
+y_list = np.linspace(-0.025, 0.025, 3)
 scaled_y_list = y_list * 112.5 + 4.5  # Scale to 0-9 range
 m_rows = 6
 offset = m_rows // 2
@@ -116,7 +116,18 @@ offset = m_rows // 2
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
 
 # First subplot: 2D Histogram
-plt.style.use("default")
+mpl.style.use("dark_background")  # Use dark background style
+plt.rcParams.update(
+    {
+        "font.size": 14,
+        "axes.labelsize": 14,
+        "axes.titlesize": 16,
+        "xtick.labelsize": 12,
+        "ytick.labelsize": 12,
+        "legend.fontsize": 10,
+    }
+)
+plt.rcParams.update
 cmap = mpl.colormaps["plasma"]  # Use the plasma colormap
 cmap.set_bad(color="white")  # Set NaN values to white
 # norm = mpl.colors.LogNorm(vmin=np.nanmin(hist_masked[hist_masked > 0]), vmax=np.nanmax(hist_masked))
@@ -173,7 +184,7 @@ scaled_y_list = scaled_y_list.tolist()
 # Second subplot: Line profiles
 scaled_x_centers = xcenters * 112.5 + 4.5
 
-cmap = mpl.colormaps["bone"]
+cmap = mpl.colormaps["jet"]  # Use the plasma colormap
 colors = [cmap(i / (len(y_list) - 1)) for i in range(len(y_list))]
 
 for i, (y, color) in enumerate(zip(y_list, colors)):
@@ -181,15 +192,30 @@ for i, (y, color) in enumerate(zip(y_list, colors)):
     y_start = max(0, y_bin_index - offset)
     y_end = min(len(ycenters), y_bin_index + offset + 1)
 
-    hist_slice = hist_masked[y_start:y_end, :].mean(axis=0)
+    hist_slice = hist_masked.T[y_start:y_end, :].mean(axis=0)
     # Normalize the histogram slice
-    hist_slice = hist_slice / np.nanmax(hist_slice)
+    hist_slice = hist_slice  #  / np.nanmax(hist_slice)
     hist_slice = (
         pd.Series(hist_slice).rolling(window=6, center=True, min_periods=1).mean().to_numpy()
     )
 
     # Plot line profile on ax2
     ax2.plot(scaled_x_centers, hist_slice, label=f"{scaled_y_list[i]:.1f}°", color=color)
+    # Add the colorbar corresponding to the line profile
+    ax2.scatter(
+        scaled_x_centers,
+        hist_slice,
+        color=color,
+        s=10,
+        alpha=0.5,
+        edgecolor="none",
+    )
+    # Plot vertical line at the center of the histogram
+    ax2.axvline(center_x, color="k", linestyle="--", linewidth=1)
+    # Plot horizontal line at the center of the histogram
+    ax2.axhline(0, color="k", linestyle="--", linewidth=1)
+    # Plot vertical line at the center of the histogram
+    ax1.axvline(center_x, color="k", linestyle="--", linewidth=1)
 
     # Plot corresponding horizontal line on ax1
     if abs(scaled_y_list[i] - center_y) <= scaled_radius:
@@ -207,6 +233,16 @@ for i, (y, color) in enumerate(zip(y_list, colors)):
         alpha=0.1,
     )
 
+# Add the colorbar for the line profiles
+# cbar2 = fig.colorbar(
+#     mpl.cm.ScalarMappable(norm=norm, cmap=cmap),
+#     ax=ax2,
+#     orientation="vertical",
+#     pad=0.01,
+#     shrink=0.9,
+#     fraction=0.1,
+# )
+# cbar2.set_label("Normalized Counts", fontsize=14)
 
 # Set labels and title
 ax2.set_xlabel("Altitude (degrees)", fontsize=14)
