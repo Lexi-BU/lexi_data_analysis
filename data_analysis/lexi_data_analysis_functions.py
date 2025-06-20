@@ -399,7 +399,7 @@ def plot_histograms(
     save_plot_name=None,
     save_plot_format="png",
     color_map="plasma",
-    color_map_center="coolwarm",
+    color_map_center="plasma",
     color_map_center_vmin=None,
     color_map_center_vmax=None,
     fixed_colorbar_limits=False,
@@ -760,9 +760,10 @@ def plot_histograms(
         plt.subplots_adjust(hspace=0.15, wspace=0.05)
 
         if color_map_center_vmin is None:
-            color_map_center_vmin = -np.max(np.abs(hist_center))
+            color_map_center_vmin = -np.nanmax(np.abs(hist_center))
         if color_map_center_vmax is None:
-            color_map_center_vmax = np.max(np.abs(hist_center))
+            color_map_center_vmax = np.nanmax(np.abs(hist_center))
+
         # Plot the center histogram
         im_center = axs.imshow(
             hist_center.T,
@@ -772,21 +773,25 @@ def plot_histograms(
             interpolation="nearest",
             cmap=color_map_center,
             # cmap=cmap,
-            # norm=mpl.colors.LogNorm(),#
-            # norm=norm,
-            norm=mpl.colors.SymLogNorm(
-                linthresh=0.001, linscale=0.1, vmin=-0.04, vmax=0.04, clip=False
-            ),
+            norm=mpl.colors.Normalize(vmin=0, vmax=0.003, clip=False),
+            # norm=nor
+            # norm=mpl.colors.SymLogNorm(
+            #     linthresh=0.001, linscale=0.1, vmin=-0.04, vmax=0.04, clip=False
+            # ),
             # vmin=color_map_center_vmin,
             # vmax=color_map_center_vmax,
         )
+        print(
+            f"Plotting histogram for time range: {start_time_left} to {end_time_left} and {start_time_right} to {end_time_right}",
+            end="\r",
+        )
         fig.suptitle(
-            f"{start_time_left.strftime('%Y-%m-%d_%H:%M:%S')} to {end_time_left.strftime('%Y-%m-%d_%H:%M:%S')} - \n {start_time_right.strftime('%Y-%m-%d_%H:%M:%S')} to {end_time_right.strftime('%Y-%m-%d_%H:%M:%S')}",
+            f"Ground data on {start_time_left.strftime('%Y-%m-%d')} \n from {start_time_left.strftime('%H:%M')} to {end_time_left.strftime('%H:%M')}",
             fontsize=14,
             y=0.92,
         )
-        axs.set_xlabel(x_key)
-        axs.set_ylabel(y_key)
+        axs.set_xlabel(f"{x_key}")
+        axs.set_ylabel(f"{y_key}")
         # Set the aspect ratio to be equal
         axs.set_aspect("equal", adjustable="box")
         # Add the colorbar
@@ -800,7 +805,7 @@ def plot_histograms(
             location="right",
             shrink=0.8,
         )
-        cbar_center.set_label("Count difference (cts/s)")
+        cbar_center.set_label("Counts (cts/s)")
         cbar_center.ax.tick_params(labelsize=10)
         # cbar_center.ax.set_yticklabels(cbar_center.get_ticks(), fontsize=10, rotation=0)
         cbar_center.ax.set_yticks(cbar_center.get_ticks())
@@ -842,7 +847,7 @@ def plot_histograms(
                 save_plot_name = f"single_histogram_{x_key}_{y_key}_{start_time_left.strftime('%Y-%m-%d_%H-%M-%s')}_to_{end_time_left.strftime('%Y-%m-%d_%H-%M-%s')}_{start_time_right.strftime('%Y-%m-%d_%H-%M-%s')}_to_{end_time_right.strftime('%Y-%m-%d_%H-%M-%s')}_{delta_time_left}_{delta_time_right}.{save_plot_format}"
             save_path = Path(save_folder)
             save_path.mkdir(parents=True, exist_ok=True)
-            print(f"Saving plot to {save_path / save_plot_name}")
+            # print(f"Saving plot to {save_path / save_plot_name}")
             plt.savefig(
                 save_path / save_plot_name,
                 format=save_plot_format,
