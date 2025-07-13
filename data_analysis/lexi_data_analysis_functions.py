@@ -305,7 +305,7 @@ def get_single_histogram_array(
             end_time=end_time,
             return_data_type="dataframe",
             kwargs={
-                "data_folder_location": "/mnt/cephadrius/bu_research/lexi_data/L1b/sci/cdf/",
+                "data_folder_location": "/mnt/cephadrius/bu_research/lexi_data/L1c/sci/cdf/",
                 "start_time": start_time,
                 "end_time": end_time,
             },
@@ -353,6 +353,81 @@ def get_single_histogram_array(
         y_data,
         bins=bins,
         range=[bin_range[0:2], bin_range[2:4]],
+    )
+
+    if time_normalization:
+        delta_time = (end_time - start_time).total_seconds()
+        hist /= delta_time
+
+    # Get the pointing location
+    pointing_file_name = (
+        "../data/merged_lexi_hk_look_direction_data_2025-01-16_00-00-00_to_2025-03-17_00-00-00.pkl"
+    )
+    df_pointing = pd.read_pickle(pointing_file_name)
+    df_pointing = df_pointing.loc[start_time:end_time]
+    ra_median = df_pointing["ra_lexi"].median()
+    dec_median = df_pointing["dec_lexi"].median()
+
+    return hist, xedges, yedges, ra_median, dec_median
+
+
+def get_single_histogram_array_l1c_files(
+    df=None,
+    x_key=None,
+    y_key=None,
+    start_time=None,
+    end_time=None,
+    bins=None,
+    bin_range=None,
+    time_normalization=True,
+    mincnt=1,
+    rotate_data=False,
+    rotation_angle=0,
+):
+    """Get a single histogram array from a dataframe."""
+
+    # Parse the start and end times
+    start_time = parser.parse(start_time) if isinstance(start_time, str) else start_time
+    end_time = parser.parse(end_time) if isinstance(end_time, str) else end_time
+
+    if df is None:
+        df = read_all_data_files(
+            file_list=None,
+            start_time=start_time,
+            end_time=end_time,
+            return_data_type="dataframe",
+            kwargs={
+                "data_folder_location": "/mnt/cephadrius/bu_research/lexi_data/L1c/sci/cdf/",
+                "start_time": start_time,
+                "end_time": end_time,
+            },
+        )
+    if df is None or df.empty:
+        raise ValueError("No data found in the specified time range.")
+
+    # Select the data for the specified time range
+    x_data = df.loc[start_time:end_time, x_key].values
+    y_data = df.loc[start_time:end_time, y_key].values
+
+    # Rotate the data if specified
+    if rotate_data:
+        # Convert the rotation angle to radians
+        rotation_angle_rad = np.deg2rad(rotation_angle)
+        # Create the rotation matrix
+        rotation_matrix = np.array(
+            [
+                [np.cos(rotation_angle_rad), -np.sin(rotation_angle_rad)],
+                [np.sin(rotation_angle_rad), np.cos(rotation_angle_rad)],
+            ]
+        )
+        # Rotate the data
+        rotated_data = np.dot(np.column_stack((x_data, y_data)), rotation_matrix)
+        x_data = -rotated_data[:, 0]
+        y_data = -rotated_data[:, 1]
+
+    # Get the histogram array
+    hist, xedges, yedges = np.histogram2d(
+        x_data, y_data, bins=bins, range=[bin_range[0:2], bin_range[2:4]]
     )
 
     if time_normalization:
@@ -773,11 +848,10 @@ def plot_histograms(
             interpolation="nearest",
             cmap=color_map_center,
             # cmap=cmap,
-            norm=mpl.colors.Normalize(vmin=0, vmax=0.003, clip=False),
-            # norm=nor
-            # norm=mpl.colors.SymLogNorm(
-            #     linthresh=0.001, linscale=0.1, vmin=-0.04, vmax=0.04, clip=False
-            # ),
+            # norm=mpl.colors.Normalize(clip=False),
+            norm=mpl.colors.SymLogNorm(
+                linthresh=0.001, linscale=0.1, vmin=-0.007, vmax=0.007, clip=False
+            ),
             # vmin=color_map_center_vmin,
             # vmax=color_map_center_vmax,
         )

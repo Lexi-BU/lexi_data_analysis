@@ -15,6 +15,7 @@ pyspedas = "^1.7.15"
 moviepy = "^2.1.2"
 plotly = "^6.0.1"
 paramiko = "^3.5.1"
+dash = "^3.1.1"
 
 [tool.poetry.dev-dependencies]
 
