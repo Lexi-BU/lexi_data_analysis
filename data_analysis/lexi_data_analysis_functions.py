@@ -71,6 +71,7 @@ def get_file_list(data_folder_location, start_time, end_time, version="v0.0"):
         filtered_files.append(selected_file)
 
     filtered_files.sort()
+    print(f"Files: {filtered_files}")
     return filtered_files
 
 
@@ -407,6 +408,7 @@ def get_single_histogram_array_l1c_files(
     mincnt=1,
     rotate_data=False,
     rotation_angle=0,
+    version_number="latest",
 ):
     """Get a single histogram array from a dataframe."""
 
@@ -424,6 +426,7 @@ def get_single_histogram_array_l1c_files(
                 "data_folder_location": "/mnt/cephadrius/bu_research/lexi_data/L1c/sci/cdf/",
                 "start_time": start_time,
                 "end_time": end_time,
+                "version": version_number,
             },
         )
     if df is None or df.empty:

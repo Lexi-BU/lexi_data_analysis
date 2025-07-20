@@ -10,7 +10,7 @@ from dash import Dash, Input, Output, State, dcc, html
 
 # Data folder and file list
 folder_name = "../data/line_profile_data/"
-file_list = sorted(glob.glob(f"{folder_name}/*.csv"))
+file_list = sorted(glob.glob(f"{folder_name}/*v0.1.csv"))
 
 # Define sunset times
 sunset_start_time = datetime.datetime(2025, 3, 16, 19, 38, 0)
@@ -29,7 +29,7 @@ app.title = "Line Profile Slope Viewer"
 # Layout with dark theme styling
 app.layout = html.Div(
     [
-        html.H2("Line Profile Slope over Time", style={"color": "white"}),
+        html.H2("Line Profile Slope over Time (Version 0.1)", style={"color": "white"}),
         html.Div(
             [
                 dcc.Checklist(

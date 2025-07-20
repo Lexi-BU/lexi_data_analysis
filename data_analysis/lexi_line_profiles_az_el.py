@@ -131,11 +131,11 @@ def plot_line_profile(
     normalize_against_ground,
     rot_angle,
     delta_time,
+    version_number,
 ):
     """
     Plot the histogram and the line profile.
     """
-    version_number = "v0.0"
     # Use the dark background for better visibility
     plt.style.use("dark_background")
     # Create figure with 2 subplots
@@ -566,7 +566,7 @@ def plot_line_profile(
     # intercept and residuals Save the values to a csv file
     # Define the file path
     best_fit_file = Path(
-        f"../data/line_profile_data/fixed_el_az_data/line_profile_best_fit_theta_offset_{x_offset:0.3f}_{y_offset:0.3f}_{delta_minutes}_minutes_{version_number}.csv"
+        f"../data/line_profile_data/line_profile_best_fit_theta_offset_{x_offset:0.3f}_{y_offset:0.3f}_{delta_minutes}_minutes_{version_number}.csv"
     )
     best_fit_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -622,7 +622,8 @@ def plot_line_profile(
 
 global_start_time = "2025-03-16T19:00:00Z"
 global_end_time = "2025-03-16T22:00:00Z"
-delta_time = pd.Timedelta(minutes=45)  # 30 seconds
+delta_time = pd.Timedelta(minutes=400)  # 30 seconds
+version_number = "v0.1"
 start_date = pd.to_datetime(global_start_time)
 end_date = pd.to_datetime(global_end_time)
 # Create a list of times from start_date to end_date with a step of delta_time
@@ -649,6 +650,7 @@ for i, start_time in enumerate(time_list_str):
             "time_normalization": True,
             "rotate_data": False,
             "rotation_angle": rot_angle,
+            "version_number": version_number,
         }
 
         read_data = True
@@ -663,28 +665,28 @@ for i, start_time in enumerate(time_list_str):
                 lexi_functions.get_single_histogram_array_l1c_files(**input_dict)
             )
             # Save the histogram data to a pickle file along with start and end time
-            save_folder = Path("../data/")
-            save_folder.mkdir(parents=True, exist_ok=True)
-            file_name = f"line_profile_histogram_data_az_el_{input_dict['start_time'].replace(':', '').replace('-', '').replace('T', '_')}_{input_dict['end_time'].replace(':', '').replace('-', '').replace('T', '_')}_rot_angle_{rot_angle}_xkey_{input_dict['x_key']}_ykey_{input_dict['y_key']}.pkl"
-            save_file = save_folder / file_name
-            with open(save_file, "wb") as f:
-                pickle.dump(
-                    {
-                        "hist": org_hist,
-                        "xedges": xedges,
-                        "yedges": yedges,
-                        "ra_median": ra_median,
-                        "dec_median": dec_median,
-                        "start_time": input_dict["start_time"],
-                        "end_time": input_dict["end_time"],
-                        "bins": input_dict["bins"],
-                        "bin_range": input_dict["bin_range"],
-                        "time_normalization": input_dict["time_normalization"],
-                        "x_key": input_dict["x_key"],
-                        "y_key": input_dict["y_key"],
-                    },
-                    f,
-                )
+            # save_folder = Path("../data/")
+            # save_folder.mkdir(parents=True, exist_ok=True)
+            # file_name = f"line_profile_histogram_data_az_el_{input_dict['start_time'].replace(':', '').replace('-', '').replace('T', '_')}_{input_dict['end_time'].replace(':', '').replace('-', '').replace('T', '_')}_rot_angle_{rot_angle}_xkey_{input_dict['x_key']}_ykey_{input_dict['y_key']}.pkl"
+            # save_file = save_folder / file_name
+            # with open(save_file, "wb") as f:
+            #     pickle.dump(
+            #         {
+            #             "hist": org_hist,
+            #             "xedges": xedges,
+            #             "yedges": yedges,
+            #             "ra_median": ra_median,
+            #             "dec_median": dec_median,
+            #             "start_time": input_dict["start_time"],
+            #             "end_time": input_dict["end_time"],
+            #             "bins": input_dict["bins"],
+            #             "bin_range": input_dict["bin_range"],
+            #             "time_normalization": input_dict["time_normalization"],
+            #             "x_key": input_dict["x_key"],
+            #             "y_key": input_dict["y_key"],
+            #         },
+            #         f,
+            #     )
 
         n_shift_bin_x = 0
         n_shift_bin_y = 0
@@ -794,31 +796,32 @@ for i, start_time in enumerate(time_list_str):
                     normalize_against_ground,
                     rot_angle if input_dict["rotate_data"] else None,
                     delta_time,
+                    version_number=version_number,
                 )
                 sum_values.append(sum_values1)
 
             # Save, theta, sum_values, x_offset, y_offset, hist, xedges, yedges, ra_median, dec_median to a
             # pickle file
-            save_folder = Path("../data/")
-            save_folder.mkdir(parents=True, exist_ok=True)
-            file_name = f"line_profile_data_{theta_list[0]}_{theta_list[-1]}_{len(theta_list)}.pkl"
-            save_file = save_folder / file_name
-            with open(save_file, "wb") as f:
-                pickle.dump(
-                    {
-                        "theta_list": theta_list,
-                        "sum_values": sum_values,
-                        "perp_value": perp_sum_value,
-                        "perp_dist": perp_dist,
-                        "x_offset": x_offset,
-                        "y_offset": y_offset,
-                        "hist": hist,
-                        "xedges": xedges,
-                        "yedges": yedges,
-                        "ra_median": ra_median,
-                        "dec_median": dec_median,
-                    },
-                    f,
-                )
+            # save_folder = Path("../data/")
+            # save_folder.mkdir(parents=True, exist_ok=True)
+            # file_name = f"line_profile_data_{theta_list[0]}_{theta_list[-1]}_{len(theta_list)}.pkl"
+            # save_file = save_folder / file_name
+            # with open(save_file, "wb") as f:
+            #     pickle.dump(
+            #         {
+            #             "theta_list": theta_list,
+            #             "sum_values": sum_values,
+            #             "perp_value": perp_sum_value,
+            #             "perp_dist": perp_dist,
+            #             "x_offset": x_offset,
+            #             "y_offset": y_offset,
+            #             "hist": hist,
+            #             "xedges": xedges,
+            #             "yedges": yedges,
+            #             "ra_median": ra_median,
+            #             "dec_median": dec_median,
+            #         },
+            #         f,
+            #     )
     except Exception:
         pass
