@@ -622,7 +622,7 @@ def plot_line_profile(
 
 global_start_time = "2025-03-16T19:00:00Z"
 global_end_time = "2025-03-16T22:00:00Z"
-delta_time = pd.Timedelta(minutes=400)  # 30 seconds
+delta_time = pd.Timedelta(minutes=0.5)  # 30 seconds
 version_number = "v0.1"
 start_date = pd.to_datetime(global_start_time)
 end_date = pd.to_datetime(global_end_time)

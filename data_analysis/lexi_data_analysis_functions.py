@@ -17,7 +17,7 @@ from spacepy.pycdf import CDF as cdf
 warnings.simplefilter("ignore", UserWarning)
 
 
-def get_file_list(data_folder_location, start_time, end_time, version="v0.0"):
+def get_file_list(data_folder_location, start_time, end_time, version="latest"):
     """Get a list of CDF files within the specified time range and version preference."""
 
     start_time = parser.parse(start_time) if isinstance(start_time, str) else start_time
