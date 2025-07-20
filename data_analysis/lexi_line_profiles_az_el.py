@@ -135,6 +135,7 @@ def plot_line_profile(
     """
     Plot the histogram and the line profile.
     """
+    version_number = "v0.0"
     # Use the dark background for better visibility
     plt.style.use("dark_background")
     # Create figure with 2 subplots
@@ -157,9 +158,10 @@ def plot_line_profile(
     ax1.set_xlabel("Azimuth [°]", fontsize=14)
     ax1.set_ylabel("Elevation [°]", fontsize=14)
 
-    ax1.set_xlim(263, 281)
-    ax1.set_ylim(15, 33)
-
+    # ax1.set_xlim(265.5, 276.5)
+    # ax1.set_ylim(19.5, 30.5)
+    ax1.set_xlim(263, 280)
+    ax1.set_ylim(15, 32)
     # tick_positions = np.linspace(263, 281, 5)
 
     # Corresponding labels from 0 to 9
@@ -248,8 +250,8 @@ def plot_line_profile(
     mask = (np.array(dist1) >= -radius_val) & (np.array(dist1) <= radius_val)
     sum_values1 = np.nansum(np.array(values1)[mask])
 
-    ax1.plot(x_line, y_line, color="green", linestyle="--", linewidth=1)
-    ax1.plot(x_offset, y_offset, "ko", markersize=4)  # Mark the offset point
+    ax1.plot(x_line, y_line, color="white", linestyle="--", linewidth=3)
+    ax1.plot(x_offset, y_offset, "wo", markersize=9)  # Mark the offset point
 
     # Add the value of rotation angle to the plot
     ax1.text(
@@ -272,11 +274,11 @@ def plot_line_profile(
         # Point radius_val units away from (x_offset, y_offset) in the line direction
         x_marker = x_offset + radius_val * dx
         y_marker = y_offset + radius_val * dy
-        ax1.plot(x_marker, y_marker, "kd", markersize=6, zorder=25)  # Mark the radius_val point
+        ax1.plot(x_marker, y_marker, "wd", markersize=10, zorder=25)  # Mark the radius_val point
         x_marker_neg = x_offset - radius_val * dx
         y_marker_neg = y_offset - radius_val * dy
         ax1.plot(
-            x_marker_neg, y_marker_neg, "kd", markersize=6, zorder=25
+            x_marker_neg, y_marker_neg, "wd", markersize=10, zorder=25
         )  # Mark the -radius_val point
 
     # Select perp_dist list and perp_value only if that line is withing radius_val distance from the
@@ -548,7 +550,7 @@ def plot_line_profile(
         fontsize=12,
     )
     delta_minutes = int(delta_time.total_seconds() / 60)
-    save_folder = Path(f"../figures/line_profiles/el_az/{delta_minutes}min/")
+    save_folder = Path(f"../figures/line_profiles/el_az_{version_number}/{delta_minutes}min/")
     save_folder.mkdir(parents=True, exist_ok=True)
     # print(f"Start date : {start_date}, End date: {end_date}")
     fig_name = f"{start_date_str[-7:-3]}_{end_date_str[-7:-3]}_sunset_single_linear_line_profile_theta_{save_theta}_offset_{x_offset:0.3f}_{y_offset:0.3f}.png"
@@ -564,7 +566,7 @@ def plot_line_profile(
     # intercept and residuals Save the values to a csv file
     # Define the file path
     best_fit_file = Path(
-        f"../data/line_profile_data/line_profile_best_fit_theta_offset_{x_offset:0.3f}_{y_offset:0.3f}_{delta_minutes}_minutes.csv"
+        f"../data/line_profile_data/fixed_el_az_data/line_profile_best_fit_theta_offset_{x_offset:0.3f}_{y_offset:0.3f}_{delta_minutes}_minutes_{version_number}.csv"
     )
     best_fit_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -620,7 +622,7 @@ def plot_line_profile(
 
 global_start_time = "2025-03-16T19:00:00Z"
 global_end_time = "2025-03-16T22:00:00Z"
-delta_time = pd.Timedelta(minutes=135)
+delta_time = pd.Timedelta(minutes=45)  # 30 seconds
 start_date = pd.to_datetime(global_start_time)
 end_date = pd.to_datetime(global_end_time)
 # Create a list of times from start_date to end_date with a step of delta_time

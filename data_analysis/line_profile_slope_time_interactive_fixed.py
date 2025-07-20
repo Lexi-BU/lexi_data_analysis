@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 from dash import Dash, Input, Output, State, dcc, html
 
 # Data folder and file list
-folder_name = "../data/line_profile_data/"
+folder_name = "../data/line_profile_data/fixed_el_az_data"
 file_list = sorted(glob.glob(f"{folder_name}/*.csv"))
 
 # Define sunset times
@@ -19,12 +19,12 @@ sunset_end_time = datetime.datetime(2025, 3, 16, 20, 44, 0)
 # Map integration time labels to file paths
 integration_map = {}
 for file in file_list:
-    integration_time = file.split("/")[-1].split("_")[-3]
+    integration_time = file.split("/")[-1].split("_")[-2]
     integration_map[integration_time] = file
 
 # Create the Dash app
 app = Dash(__name__)
-app.title = "Line Profile Slope Viewer"
+app.title = "Line Profile Slope Viewer (Fixed El/Az Data)"
 
 # Layout with dark theme styling
 app.layout = html.Div(
@@ -198,9 +198,10 @@ def update_figure(selected_integrations, show_avg, avg_type, window_minutes):
 
 
 def open_browser():
-    webbrowser.open_new("http://127.0.0.1:8050")
+    webbrowser.open_new("http://127.0.0.0:8050")
 
 
 if __name__ == "__main__":
     # threading.Timer(1.5, open_browser).start()
-    app.run(debug=False)
+    # define the server and the port
+    app.run(debug=False, host="0.0.0.0", port=8000)

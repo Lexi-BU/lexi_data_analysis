@@ -193,9 +193,18 @@ for plot_start_time, plot_end_time in zip(plot_start_time_list, plot_end_time_li
         color="g",
     )
     ax.text(
-        0.95,
+        0.75,
         1.01,
-        "Event Counts",
+        "Event Counts (Sci)",
+        horizontalalignment="right",
+        verticalalignment="bottom",
+        transform=ax.transAxes,
+        color="y",
+    )
+    ax.text(
+        0.98,
+        1.01,
+        "Event Counts (HK)",
         horizontalalignment="right",
         verticalalignment="bottom",
         transform=ax.transAxes,
@@ -242,24 +251,90 @@ for plot_start_time, plot_end_time in zip(plot_start_time_list, plot_end_time_li
         axis.set_tick_params(which="both", direction="in", color="w")
     twin_ax_1.tick_params(which="both", direction="in", color="r")
 
-    # Add a vertical line at 19:45
-    vertical_line_time = datetime.datetime.strptime("2025-03-16T19:45:00Z", "%Y-%m-%dT%H:%M:%SZ")
+    # Define sunset times
+    sunset_start_time = datetime.datetime(2025, 3, 16, 19, 38, 0)
+    sunset_end_time = datetime.datetime(2025, 3, 16, 20, 44, 0)
+    # Add a vertical line for sunset start and end times
     ax.axvline(
-        x=vertical_line_time,
-        color="y",
+        sunset_start_time,
+        color="white",
         linestyle="--",
-        linewidth=2,
-        label="Vertical Line at 19:45 UTC",
+    )
+    ax.axvline(
+        sunset_end_time,
+        color="grey",
+        linestyle="--",
+    )
+    # Add a shaded region for the sunset period
+    # ax.axvspan(
+    #     sunset_start_time,
+    #     sunset_end_time,
+    #     color="yellow",
+    #     alpha=0.1,
+    #     label="Sunset Period",
+    #     zorder=1,
+    # )
+    gradient = np.linspace(0, 1, 256).reshape(1, -1)  # Horizontal gradient
+    ax.imshow(
+        gradient,
+        extent=[sunset_start_time, sunset_end_time, ax.get_ylim()[0], ax.get_ylim()[1]],
+        aspect="auto",
+        cmap="binary_r",  # Yellow to brown colormap, you can customize this
+        alpha=0.3,
+        zorder=1,
+    )
+    # Add a label to the vertical lines
+    ax.text(
+        sunset_start_time + datetime.timedelta(minutes=1),
+        ax.get_ylim()[1] * 0.9,
+        f"Sunset Start\n {sunset_start_time.strftime('%H:%M')}",
+        color="white",
+        ha="left",
+        va="bottom",
     )
     ax.text(
-        vertical_line_time + datetime.timedelta(minutes=2),
+        sunset_end_time - datetime.timedelta(minutes=1),
         ax.get_ylim()[1] * 0.9,
-        "19:45 UTC",
-        color="y",
-        fontsize=10,
-        horizontalalignment="left",
-        verticalalignment="bottom",
+        f"Sunset End\n {sunset_end_time.strftime('%H:%M')}",
+        color="grey",
+        ha="right",
+        va="bottom",
     )
+
+    counts_per_second_file = (
+        "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_pipeline/data/counts_per_second.csv"
+    )
+    df_counts = pd.read_csv(counts_per_second_file, index_col=0, parse_dates=True)
+    df_counts = df_counts.loc[plot_start_time:plot_end_time]
+    # Add the df_counts data to the plot (left axis)
+    twin_ax_1.scatter(
+        df_counts.index,
+        df_counts["0"],
+        label="Counts per Second",
+        color="y",
+        s=1,
+        alpha=0.5,
+        zorder=22,
+    )
+    # ax.set_ylim(0, 1500)
+    # # Add a vertical line at 19:45
+    # vertical_line_time = datetime.datetime.strptime("2025-03-16T19:45:00Z", "%Y-%m-%dT%H:%M:%SZ")
+    # ax.axvline(
+    #     x=vertical_line_time,
+    #     color="y",
+    #     linestyle="--",
+    #     linewidth=2,
+    #     label="Vertical Line at 19:45 UTC",
+    # )
+    # ax.text(
+    #     vertical_line_time + datetime.timedelta(minutes=2),
+    #     ax.get_ylim()[1] * 0.9,
+    #     "19:45 UTC",
+    #     color="y",
+    #     fontsize=10,
+    #     horizontalalignment="left",
+    #     verticalalignment="bottom",
+    # )
     # Save the figure
     fig.savefig(
         f"../figures/lexi_data_{plot_start_time}_to_{plot_end_time}_all_counts.png",

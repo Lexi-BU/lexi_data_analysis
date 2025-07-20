@@ -43,8 +43,8 @@ input_dict = {
 input_dict_2 = {
     "x_key": "photon_az",
     "y_key": "photon_el",
-    "start_time": "2025-03-16T16:30:00Z",
-    "end_time": "2025-03-16T21:30:00Z",
+    "start_time": "2025-03-16T19:00:00Z",
+    "end_time": "2025-03-16T21:15:00Z",
     "bins": 200,
     "bin_range": [263, 281, 15, 33],
     "time_normalization": True,
@@ -52,7 +52,7 @@ input_dict_2 = {
     "rotation_angle": rot_angle,
 }
 
-normalize_against_ground = True
+normalize_against_ground = False
 
 if "old_start_time" not in locals():
     old_start_time = input_dict["start_time"]
@@ -63,7 +63,7 @@ if old_start_time != input_dict["start_time"] or old_end_time != input_dict["end
     read_data = True
 else:
     read_data = False
-read_data = True
+read_data = False
 if read_data:
     org_hist, org_xedges, org_yedges, org_ra_median, org_dec_median = (
         lexi_functions.get_single_histogram_array_l1c_files(**input_dict)
@@ -141,7 +141,7 @@ if read_data:
 lexi_functions.plot_histograms(
     hist_left=org_hist,
     hist_right=ground_hist,
-    hist_center=scaled_hist,
+    hist_center=org_hist,
     xedges=org_xedges,
     yedges=org_yedges,
     x_key=input_dict["x_key"],
@@ -157,7 +157,7 @@ lexi_functions.plot_histograms(
     save_folder="../figures/histogram_normalized_diff/single_histogram/l1c/",
     save_plot_name=f"histogram_{input_dict['x_key']}_{input_dict['y_key']}_{input_dict['start_time'].replace(':', '').replace('-', '').replace('T', '_')}_{input_dict['end_time'].replace(':', '').replace('-', '').replace('T', '_')}_normalized_l1c.png",
     save_plot=True,
-    color_map_center="RdBu",
+    color_map_center="inferno",
     single_histogram=True,
 )
 

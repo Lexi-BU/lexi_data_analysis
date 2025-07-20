@@ -17,25 +17,23 @@ from spacepy.pycdf import CDF as cdf
 warnings.simplefilter("ignore", UserWarning)
 
 
-def get_file_list(data_folder_location, start_time, end_time):
-    """Get a list of CDF files within the specified time range."""
+def get_file_list(data_folder_location, start_time, end_time, version="v0.0"):
+    """Get a list of CDF files within the specified time range and version preference."""
 
     start_time = parser.parse(start_time) if isinstance(start_time, str) else start_time
     end_time = parser.parse(end_time) if isinstance(end_time, str) else end_time
-    # Construct the folder path
-    folder_name = data_folder_location  # + start_time.strftime("%Y-%m-%d")
 
-    # Get all .cdf files recursively
+    folder_name = data_folder_location
     file_list = sorted(glob.glob(folder_name + "/**/*.cdf", recursive=True))
 
-    # Regex pattern to extract timestamps from filenames
     pattern = re.compile(
-        r"(\d{4}-\d{2}-\d{2})_(\d{2}-\d{2}-\d{2})_to_(\d{4}-\d{2}-\d{2})_(\d{2}-\d{2}-\d{2})"
+        r"(\d{4}-\d{2}-\d{2})_(\d{2}-\d{2}-\d{2})_to_(\d{4}-\d{2}-\d{2})_(\d{2}-\d{2}-\d{2})_sci_output_L1c_v(\d+)\.(\d+)\.cdf$"
     )
 
-    filtered_files = []
+    file_dict = {}
+
     for file in file_list:
-        match = pattern.search(file)
+        match = pattern.search(Path(file).name)
         if match:
             start_dt_str = match.group(1) + "T" + match.group(2).replace("-", ":") + "Z"
             end_dt_str = match.group(3) + "T" + match.group(4).replace("-", ":") + "Z"
@@ -43,11 +41,37 @@ def get_file_list(data_folder_location, start_time, end_time):
             file_start_time = parser.parse(start_dt_str)
             file_end_time = parser.parse(end_dt_str)
 
-            # Check if the file is within the time range
             if file_start_time <= end_time and file_end_time >= start_time:
-                filtered_files.append(file)
+                time_key = f"{match.group(1)}_{match.group(2)}_to_{match.group(3)}_{match.group(4)}"
+                file_version = (int(match.group(5)), int(match.group(6)))
 
-    return filtered_files  # , file_list
+                if time_key not in file_dict:
+                    file_dict[time_key] = []
+
+                file_dict[time_key].append((file_version, file))
+
+    filtered_files = []
+    for time_key, files in file_dict.items():
+        if version == "latest":
+            selected_file = max(files, key=lambda x: x[0])[1]
+        elif isinstance(version, tuple):
+            matching_files = [f for v, f in files if v == version]
+            if matching_files:
+                selected_file = matching_files[0]
+            else:
+                continue
+        else:
+            major, minor = map(int, version.replace("v", "").split("."))
+            matching_files = [f for v, f in files if v == (major, minor)]
+            if matching_files:
+                selected_file = matching_files[0]
+            else:
+                continue
+
+        filtered_files.append(selected_file)
+
+    filtered_files.sort()
+    return filtered_files
 
 
 def read_all_data_files(
@@ -835,7 +859,7 @@ def plot_histograms(
         plt.subplots_adjust(hspace=0.15, wspace=0.05)
 
         if color_map_center_vmin is None:
-            color_map_center_vmin = -np.nanmax(np.abs(hist_center))
+            color_map_center_vmin = np.nanmin(np.abs(hist_center))
         if color_map_center_vmax is None:
             color_map_center_vmax = np.nanmax(np.abs(hist_center))
 
@@ -848,10 +872,10 @@ def plot_histograms(
             interpolation="nearest",
             cmap=color_map_center,
             # cmap=cmap,
-            # norm=mpl.colors.Normalize(clip=False),
-            norm=mpl.colors.SymLogNorm(
-                linthresh=0.001, linscale=0.1, vmin=-0.007, vmax=0.007, clip=False
-            ),
+            norm=mpl.colors.Normalize(clip=False),
+            # norm=mpl.colors.SymLogNorm(
+            #     linthresh=0.001, linscale=0.1, vmin=-0.007, vmax=0.007, clip=False
+            # ),
             # vmin=color_map_center_vmin,
             # vmax=color_map_center_vmax,
         )
@@ -860,7 +884,7 @@ def plot_histograms(
             end="\r",
         )
         fig.suptitle(
-            f"Ground data on {start_time_left.strftime('%Y-%m-%d')} \n from {start_time_left.strftime('%H:%M')} to {end_time_left.strftime('%H:%M')}",
+            f"LEXI data on {start_time_right.strftime('%Y-%m-%d')} \n from {start_time_right.strftime('%H:%M')} to {end_time_right.strftime('%H:%M')}",
             fontsize=14,
             y=0.92,
         )
