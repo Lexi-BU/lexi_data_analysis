@@ -71,7 +71,7 @@ def get_file_list(data_folder_location, start_time, end_time, version="latest"):
         filtered_files.append(selected_file)
 
     filtered_files.sort()
-    print(f"Files: {filtered_files}")
+    # print(f"Files: {filtered_files}")
     return filtered_files
 
 
