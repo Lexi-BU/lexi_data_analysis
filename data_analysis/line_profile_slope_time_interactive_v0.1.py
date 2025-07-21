@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.io as pio
 from dash import Dash, Input, Output, State, dcc, html
 
 # Data folder and file list
@@ -197,10 +198,24 @@ def update_figure(selected_integrations, show_avg, avg_type, window_minutes):
     return fig
 
 
+def save_figure(selected_integrations, show_avg, avg_type, window_minutes):
+    fig = update_figure(selected_integrations, show_avg, avg_type, window_minutes)
+    fig.write_html("slope_plot.html", include_plotlyjs="cdn")
+    fig.write_image("slope_plot.png", width=1200, height=800)
+    print("Saved slope_plot.html and slope_plot.png")
+
+
 def open_browser():
     webbrowser.open_new("http://127.0.0.1:8050")
 
 
 if __name__ == "__main__":
+    # Example save call:
+    selected_integrations = list(integration_map.keys())
+    show_avg = ["show"]
+    avg_type = "mean"
+    window_minutes = 5
+    save_figure(selected_integrations, show_avg, avg_type, window_minutes)
+
     # threading.Timer(1.5, open_browser).start()
     app.run(debug=False)

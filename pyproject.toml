@@ -18,6 +18,7 @@ paramiko = "^3.5.1"
 dash = "^3.1.1"
 pylunar = "^0.10.0"
 basemap = "^2.0.0"
+kaleido = "0.2.1"
 
 [tool.poetry.dev-dependencies]
 
