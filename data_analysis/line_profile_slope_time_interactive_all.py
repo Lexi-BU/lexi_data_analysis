@@ -201,7 +201,7 @@ def update_figure(selected_integrations, selected_versions, show_avg, avg_type, 
         title="Slope vs Time (Select Integration Time and Version)",
         xaxis_title="Time",
         yaxis_title="Slope",
-        height=800,
+        height=600,
         margin=dict(t=50, r=20, l=20, b=50),
         legend_title_text="Integration Time and Version",
         legend=dict(
