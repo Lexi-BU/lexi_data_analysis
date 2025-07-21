@@ -353,113 +353,72 @@ def plot_line_profile(
         s=2,
     )
 
-    # ax2.set_ylim(0, 500) Get a best fit line for the selected values2
-    if len(dist2_selected) > 0:
-        normalize_against_ground = True
-        if normalize_against_ground:
-            # Fit a 1st-degree polynomial (line)
-            coeffs, residuals, _, _, _ = np.polyfit(dist2_selected, values2_selected, 1, full=True)
-            poly_fit = np.poly1d(coeffs)
-            x_fit = np.linspace(
-                y_offset - radius_val, y_offset + radius_val, 100
-            )  # Updated x_fit range
-            y_fit = poly_fit(x_fit)
+    x = np.array(dist2_selected)
+    y = np.array(values2_selected)
 
-            # In a csv file, save the slope, coeffs and residuals along with theta
-            best_fit_file = Path("../data/line_profile_best_fit_theta_offset_2042_2102_2d.csv")
-            best_fit_file.parent.mkdir(parents=True, exist_ok=True)
-            # Check if the file already exists
-            if best_fit_file.exists():
-                # Read the existing file
-                df = pd.read_csv(best_fit_file)
-                # Append the new data to the existing file
-                new_data = {
-                    "theta": theta,
-                    "slope": coeffs[0],
-                    "intercept": coeffs[1],
-                    "residuals": residuals[0],
-                }
-                # Add the new data to the DataFrame
-                df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
-                df.to_csv(best_fit_file, index=False)
-            else:
-                # Create a new DataFrame and save it to a CSV file
-                df = pd.DataFrame(
-                    {
-                        "theta": [theta],
-                        "slope": [coeffs[0]],
-                        "intercept": [coeffs[1]],
-                        "residuals": [residuals[0]],
-                    }
-                )
-                df.to_csv(best_fit_file, index=False)
+    # Sort data
+    sorted_idx = np.argsort(x)
+    x, y = x[sorted_idx], y[sorted_idx]
 
-            ax2.plot(y_fit, x_fit, color="w", linestyle="--", linewidth=2)
-            # Add the equation of the line to the plot right above the line
-            ax2.text(
-                0.99,
-                0.99,
-                f"x = {coeffs[0]:.3f}y + {coeffs[1]:.3f} \n residuals = {residuals[0]:.3f}",
-                transform=ax2.transAxes,
-                fontsize=12,
-                # Rotate the text by the slope of the line
-                rotation=0,
-                horizontalalignment="right",
-                verticalalignment="top",
-                bbox=dict(facecolor="k", alpha=0.5, edgecolor="none"),
-            )
-        else:
-            # Fit a 2nd-degree polynomial (parabola)
-            coeffs, residuals, _, _, _ = np.polyfit(dist2_selected, values2_selected, 2, full=True)
-            poly_fit = np.poly1d(coeffs)
-            # x_fit = np.linspace(-0.04, 0.04, 100)
-            x_fit = np.linspace(0, 9.1, 100)
-            y_fit = poly_fit(x_fit)
+    # Exclude last 4 points
+    x, y = x[:-4], y[:-4]
 
-            best_fit_file = Path(f"../data/line_profile_best_fit_theta_offset_2042_2102_2d.csv")
-            best_fit_file.parent.mkdir(parents=True, exist_ok=True)
+    min_ssr = np.inf
+    best_break = None
+    best_coeff_left = None
+    best_slope_right = None
 
-            if best_fit_file.exists():
-                df = pd.read_csv(best_fit_file)
-                new_data = {
-                    "theta": theta,
-                    "quadratic": coeffs[0],
-                    "linear": coeffs[1],
-                    "intercept": coeffs[2],
-                    "residuals": residuals[0] if len(residuals) > 0 else np.nan,
-                }
-                df = pd.concat([df, pd.DataFrame([new_data])], ignore_index=True)
-                df.to_csv(best_fit_file, index=False)
-                # Drop the duplicate rows
-                df = df.drop_duplicates(subset=["theta"], keep="last")
-            else:
-                df = pd.DataFrame(
-                    {
-                        "theta": [theta],
-                        "quadratic": [coeffs[0]],
-                        "linear": [coeffs[1]],
-                        "intercept": [coeffs[2]],
-                        "residuals": [residuals[0] if len(residuals) > 0 else np.nan],
-                    }
-                )
-                df.to_csv(best_fit_file, index=False)
+    min_segment_size = max(5, len(x) // 20)
 
-            ax2.plot(x_fit, y_fit, color="w", linestyle="--", linewidth=2)
-            ax2.text(
-                0.99,
-                0.99,
-                (
-                    f"y = {coeffs[0]:.3f}x² + {coeffs[1]:.3f}x + {coeffs[2]:.3f}\nresiduals = {residuals[0]:.2e}"
-                    if len(residuals) > 0
-                    else f"y = {coeffs[0]:.3f}x² + {coeffs[1]:.3f}x + {coeffs[2]:.3f}"
-                ),
-                transform=ax2.transAxes,
-                fontsize=12,
-                rotation=0,
-                horizontalalignment="right",
-                verticalalignment="top",
-                bbox=dict(facecolor="k", alpha=0.5, edgecolor="none"),
-            )
+    # Determine starting index for break-point (strictly second half)
+    min_break_index = len(x) // 2
+
+    # Loop over valid breakpoints (second half only)
+    for i in range(min_break_index, len(x) - min_segment_size):
+        x_left, y_left = x[:i], y[:i]
+        x_right, y_right = x[i:], y[i:]
+
+        coeff_left = np.polyfit(x_left, y_left, 1)
+
+        y_break = np.polyval(coeff_left, x[i])
+
+        # Slope of right segment (forced to pass through the break-point)
+        slope_right = np.sum((y_right - y_break) * (x_right - x[i])) / np.sum((x_right - x[i]) ** 2)
+        y_fit_right = y_break + slope_right * (x_right - x[i])
+
+        ssr_left = np.sum((y_left - np.polyval(coeff_left, x_left)) ** 2)
+        ssr_right = np.sum((y_right - y_fit_right) ** 2)
+        total_ssr = ssr_left + ssr_right
+
+        if total_ssr < min_ssr:
+            min_ssr = total_ssr
+            best_break = x[i]
+            best_coeff_left = coeff_left
+            best_slope_right = slope_right
+
+    # Generate fit lines
+    x_fit_left = np.linspace(x[0], best_break, 100)
+    y_fit_left = np.polyval(best_coeff_left, x_fit_left)
+
+    x_fit_right = np.linspace(best_break, x[-1], 100)
+    y_break = np.polyval(best_coeff_left, best_break)
+    y_fit_right = y_break + best_slope_right * (x_fit_right - best_break)
+
+    # Plot
+    ax2.plot(y_fit_left, x_fit_left, color="magenta", linestyle="--", linewidth=2)
+    ax2.plot(y_fit_right, x_fit_right, color="aqua", linestyle="--", linewidth=2)
+    ax2.axhline(best_break, color="yellow", linestyle="dashed", linewidth=1, alpha=0.5)
+
+    ax2.text(
+        0.99,
+        0.99,
+        f"Slope 1: {best_coeff_left[0]:.3f}, Slope 2: {best_slope_right:.3f}\nBreak @ {best_break:.3f}\nSSR: {min_ssr:.3f}",
+        transform=ax2.transAxes,
+        fontsize=12,
+        horizontalalignment="right",
+        verticalalignment="top",
+        bbox=dict(facecolor="k", alpha=0.5, edgecolor="none"),
+    )
 
     # for dist, value in zip(dist2, values2): ax2.text( dist, value, f"{value:.1f}", color="red",
     #     fontsize=5, ha="left", va="bottom", ) ax2.set_xlabel("Distance from (x_offset, y_offset)
@@ -550,7 +509,9 @@ def plot_line_profile(
         fontsize=12,
     )
     delta_minutes = int(delta_time.total_seconds() / 60)
-    save_folder = Path(f"../figures/line_profiles/el_az_{version_number}/{delta_minutes}min/")
+    save_folder = Path(
+        f"../figures/line_profiles/el_az_{version_number}/{delta_minutes}min/broken/"
+    )
     save_folder.mkdir(parents=True, exist_ok=True)
     # print(f"Start date : {start_date}, End date: {end_date}")
     fig_name = f"{start_date_str[-7:-3]}_{end_date_str[-7:-3]}_sunset_single_linear_line_profile_theta_{save_theta}_offset_{x_offset:0.3f}_{y_offset:0.3f}.png"
@@ -569,46 +530,6 @@ def plot_line_profile(
         f"../data/line_profile_data/line_profile_best_fit_theta_offset_{x_offset:0.3f}_{y_offset:0.3f}_{delta_minutes}_minutes_{version_number}.csv"
     )
     best_fit_file.parent.mkdir(parents=True, exist_ok=True)
-
-    # New data to be inserted
-    new_data = {
-        "start_time": start_time,
-        "end_time": end_time,
-        "theta": theta,
-        "sum_values1": sum_values1,
-        "slope": np.round(coeffs[0], 3),
-        "intercept": np.round(coeffs[1], 3),
-        "residuals": np.round(residuals[0], 3) if len(residuals) > 0 else np.nan,
-        "min_value": np.round(np.nanmin(values2_selected), 3),
-        "max_value": np.round(np.nanmax(values2_selected), 3),
-    }
-    new_row = pd.DataFrame([new_data])
-
-    # Load existing data or create a new DataFrame
-    if best_fit_file.exists():
-        df = pd.read_csv(best_fit_file)
-        # Ensure proper datetime conversion if necessary
-        # df["start_time"] = pd.to_datetime(df["start_time"])
-        # df["end_time"] = pd.to_datetime(df["end_time"])
-    else:
-        df = pd.DataFrame(columns=new_data.keys())
-
-    # Drop existing row with the same start and end time if it exists
-    mask = (df["start_time"] == start_time) & (df["end_time"] == end_time)
-    df = df[~mask]
-
-    # Append new data
-    df = pd.concat([df, new_row], ignore_index=True)
-
-    # Optional: sort by start_time and end_time
-    df = df.sort_values(by=["start_time", "end_time"]).reset_index(drop=True)
-
-    # Save back to file
-    df.to_csv(best_fit_file, index=False)
-
-    # Find the minimum and maximum values of min_value and max_value
-    min_of_min_value = np.nanmin(df["min_value"])
-    max_of_max_value = np.nanmax(df["max_value"])
 
     # Set the x-limit for the second plot based on the min and max values
     # ax2.set_xlim(min_of_min_value, max_of_max_value)
