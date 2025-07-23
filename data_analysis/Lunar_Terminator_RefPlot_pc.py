@@ -12,10 +12,11 @@ from pylunar import MoonInfo
 Folder = "/Users/emilatz/Dropbox/Research/LEXI/MoonMap/"
 # Create a MoonInfo object for a specific date and observer location
 # This is needed just to "create" the moon in the code
+# The next three lines are just to set the observer location and time on the Earth
 observer_lat = 0  # Earth obs latitude
 observer_lon = 90  # Earth obs longitude
 observer_alt = 0.0
-date = datetime(2025, 3, 10, 19, 28, 0)  # This needs to be UTC
+date = datetime(2025, 3, 16, 19, 38, 0)  # This needs to be UTC
 moon_info = MoonInfo([observer_lat, 0, 0], [observer_lon, 0, 0])  # Create the moon for PyLunar
 moon_info.update(date)  # Update the time so the moon is correctly "lit" by the sun
 
@@ -36,6 +37,7 @@ BGM1 = pylunar.LunarFeature(
 # Solar_altituide gives the angle of the sun above the horizon for the location
 solaralt = moon_info.solar_altitude(BGM1)
 print(f"Solar Alt: {solaralt:.2f} degrees")
+
 
 map = moon_map.MoonMapSmall()
 map_on_sphere = map.gridsphere()

@@ -1,0 +1,110 @@
+from datetime import datetime
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import pylunar
+
+
+"""
+This script calculates the solar zenith angle for a specific lunar feature (BGM1) over a defined
+time range.
+It saves the results to a CSV file and generates a plot of the solar zenith angle over time.
+
+NOTE: The script uses PyLunar to calculate the solar altitude and derive the solar zenith angle. The
+package can be installed via pip if not already available:
+    pip install pylunar
+
+The script also includes an option to create an interactive plot using Plotly, which can be enabled
+by setting the `plot_interactive` variable to `True`. If you want to use Plotly, ensure you have it 
+installed:
+    pip install plotly
+"""
+
+# Create a MoonInfo object for a specific date and observer location
+# This is needed just to "create" the moon in the code
+# The next three lines are just to set the observer location and time on the Earth
+observer_lat = 0  # Earth obs latitude
+observer_lon = 90  # Earth obs longitude
+observer_alt = 0.0
+
+start_time = datetime(2025, 3, 2, 8, 0, 0)
+end_time = datetime(2025, 3, 16, 22, 0, 0)
+moon_info = pylunar.MoonInfo(
+    [observer_lat, 0, 0], [observer_lon, 0, 0]
+)  # Create the moon for PyLunar
+
+# Define the frequency of the solar zenith angle calculation
+# 1 minute frequency, other options could be '1H', '30min', etc. for hourly or half-hourly data
+frequency = "1min"
+
+# Generate a time range for the solar zenith angle calculation
+time_range = pd.date_range(start=start_time, end=end_time, freq=frequency)
+
+# This class, Lunar Feature, creates a instance of the BGM1 landing site
+BGM1 = pylunar.LunarFeature(
+    name="BGM1",
+    diameter=0.001,
+    latitude=18.562,
+    longitude=61.81,
+    delta_latitude=0,
+    delta_longitude=0,
+    feature_type="Satellite Feature",
+    quad_name="LAC-44",
+    quad_code="LAC44",
+    code_name="BGM1",
+    lunar_club_type="BGM1",
+)
+
+solar_zenith_angles = []
+for time in time_range:
+    moon_info.update(time)  # Update the time so the moon is correctly "lit" by the sun
+    # Solar altitude gives the angle of the sun above the horizon for the location
+    solar_altitude = moon_info.solar_altitude(BGM1)
+    # Calculate solar zenith angle
+    solar_zenith_angle = 90 - solar_altitude
+    solar_zenith_angles.append(solar_zenith_angle)
+
+# Create a DataFrame to store the results
+df = pd.DataFrame({"Time": time_range, "SZA": solar_zenith_angles})
+
+# Save the results to a CSV file
+df.to_csv("solar_zenith_angle.csv", index=False)
+
+# Plot the solar zenith angle over time
+plt.figure(figsize=(10, 5))
+plt.plot(df["Time"], df["SZA"], marker="o", linestyle="-", color="b")
+plt.title("Solar Zenith Angle Over Time")
+plt.xlabel("Time [UTC]")
+plt.ylabel("Solar Zenith Angle [degrees]")
+plt.xticks(rotation=45)
+plt.grid()
+plt.tight_layout()
+figure_folder = Path("figures/solar_zenith_angle")
+figure_folder.mkdir(parents=True, exist_ok=True)
+plt.savefig(
+    figure_folder / "solar_zenith_angle_plot.png", dpi=300, bbox_inches="tight", pad_inches=0.1
+)
+plt.close()
+
+
+# NOTE: The following section is for an interactive plot using Plotly.
+plot_interactive = False
+
+if plot_interactive:
+    # Using plotly for an interactive plot
+    import plotly.express as px
+
+    # fig = px.line(df, x="Time", y="SZA", title="Solar Zenith Angle Over Time")
+    # Make a scatter plot with lines
+    fig = px.scatter(df, x="Time", y="SZA", title="Solar Zenith Angle Over Time")
+
+    # Update layout for better readability
+    fig.update_layout(
+        xaxis_title="Time [UTC]",
+        yaxis_title="Solar Zenith Angle [degrees]",
+        title_x=0.5,  # Center the title
+        template="plotly_white",  # Use a clean template
+    )
+    # Save the interactive plot as an HTML file
+    fig.write_html(figure_folder / "solar_zenith_angle_interactive_plot.html")
