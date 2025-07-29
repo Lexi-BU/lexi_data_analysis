@@ -243,17 +243,33 @@ for plot_start_time, plot_end_time in zip(plot_start_time_list, plot_end_time_li
         .replace("Z", "")
     )
 
-    # Set the title
-    fig.suptitle(f"LEXI Data from {min_time_str} to {max_time_str}")
-
     # Put all ticks inside the plot
     for axis in [ax.xaxis, ax.yaxis]:
         axis.set_tick_params(which="both", direction="in", color="w")
     twin_ax_1.tick_params(which="both", direction="in", color="r")
 
     # Define sunset times
-    sunset_start_time = datetime.datetime(2025, 3, 16, 19, 38, 0)
-    sunset_end_time = datetime.datetime(2025, 3, 16, 20, 44, 0)
+    # NOTE: These sunset start and end times are from FireFly. It was computed using a spherical
+    # model of the moon. However, as Tim Stubbs pointed out, the sunset times are not accurate since
+    # it does not take into account the local topography.
+    # sunset_start_time = datetime.datetime(2025, 3, 16, 19, 38, 0)
+    # sunset_end_time = datetime.datetime(2025, 3, 16, 20, 44, 0)
+    # NOTE: Here is the note from Tim Stubbs:
+    # These are the sunset start and end times that I estimated using LROC Quickmap, which includes the effects of terrain …
+
+    # Start time: 2025-03-16   18:22 UTC
+    # End time:   2025-03-16   19:29 UTC
+
+    # The observation point was …
+    # Latitude:  18.56220 deg
+    # Longitude:  61.81021 deg
+    # Height: -3.648 km (relative to reference radius)
+    # This equates to a height above the surface of 2 m
+    # The Firefly website stated that Blue Ghost was 2 m tall. LEXI was on the top deck.
+    # These estimates are probably +/- ~10 minutes
+    sunset_start_time = datetime.datetime(2025, 3, 16, 18, 22, 0, tzinfo=datetime.timezone.utc)
+    sunset_end_time = datetime.datetime(2025, 3, 16, 19, 29, 0, tzinfo=datetime.timezone.utc)
+
     # Add a vertical line for sunset start and end times
     ax.axvline(
         sunset_start_time,
@@ -315,6 +331,12 @@ for plot_start_time, plot_end_time in zip(plot_start_time_list, plot_end_time_li
         s=1,
         alpha=0.5,
         zorder=22,
+    )
+
+    # Set the title
+    fig.suptitle(
+        f"LEXI Data from {min_time_str} to {max_time_str}\n The sunset period is from {sunset_start_time.strftime('%H:%M')} to {sunset_end_time.strftime('%H:%M')}",
+        fontsize=14,
     )
     # ax.set_ylim(0, 1500)
     # # Add a vertical line at 19:45
