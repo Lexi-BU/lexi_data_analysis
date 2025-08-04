@@ -300,14 +300,14 @@ for plot_start_time, plot_end_time in zip(plot_start_time_list, plot_end_time_li
         zorder=1,
     )
     # Add a label to the vertical lines
-    ax.text(
-        sunset_start_time + datetime.timedelta(minutes=1),
-        ax.get_ylim()[1] * 0.9,
-        f"Sunset Start\n {sunset_start_time.strftime('%H:%M')}",
-        color="white",
-        ha="left",
-        va="bottom",
-    )
+    # ax.text(
+    #     sunset_start_time + datetime.timedelta(minutes=1),
+    #     ax.get_ylim()[1] * 0.9,
+    #     f"Sunset Start\n {sunset_start_time.strftime('%H:%M')}",
+    #     color="white",
+    #     ha="left",
+    #     va="bottom",
+    # )
     ax.text(
         sunset_end_time - datetime.timedelta(minutes=1),
         ax.get_ylim()[1] * 0.9,

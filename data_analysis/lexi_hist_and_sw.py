@@ -10,6 +10,7 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from pandas.tseries.frequencies import to_offset
 from scipy import stats
 from scipy.ndimage import map_coordinates
 
@@ -23,14 +24,14 @@ np.seterr(divide="ignore", invalid="ignore")
 def get_lexi_and_sw_data(
     start_time="2025-03-16T19:45:00Z",
     end_time="2025-03-16T19:50:00Z",
-    x_key="x_volt_lin",
-    y_key="y_volt_lin",
+    x_key="photon_az",
+    y_key="photon_el",
     bins=200,
-    bin_range=[-0.1, 0.1, -0.1, 0.1],
+    bin_range=[263, 281, 15, 33],
     time_normalization=True,
     normalize_against_ground=True,
-    rotate_data=True,
-    rotation_angle=13.7,
+    rotate_data=False,
+    rotation_angle=0,
     themis_sc="c",
 ):
     """
@@ -46,11 +47,15 @@ def get_lexi_and_sw_data(
         "time_normalization": time_normalization,
         "rotate_data": rotate_data,
         "rotation_angle": rotation_angle,
+        "version_number": "v0.1",
     }
 
-    org_hist, xedges, yedges, ra_median, dec_median = lexi_functions.get_single_histogram_array(
+    org_hist, xedges, yedges, _, _ = lexi_functions.get_single_histogram_array_l1c_files(
         **input_dict
     )
+    # print(
+    #     f"The maximum value of the histogram is {np.nanmax(org_hist)}\n The minimum value is {np.nanmin(org_hist)}"
+    # )
 
     n_shift_bin_x = 0
     n_shift_bin_y = 0
@@ -64,12 +69,7 @@ def get_lexi_and_sw_data(
     # print("Histogram data loaded successfully.")
     for alpha in alpha_list:
         if normalize_against_ground:
-            if input_dict["rotate_data"]:
-                ground_file_name = "../data/ground_histogram_data_20240523_224500Z_20240530_024500Z_rot_angle_13.7.pkl"
-            else:
-                ground_file_name = (
-                    "../data/ground_test_histogram_data_20240523_224500Z_20240530_024500Z.pkl"
-                )
+            ground_file_name = "../data/ground_histogram_data_20250316_163000Z_20250316_213000Z_rot_angle_0_xkey_photon_az_ykey_photon_el_l1c.pkl"
             with open(ground_file_name, "rb") as f:
                 ground_data = pickle.load(f)
             ground_hist = ground_data["hist"]
@@ -125,8 +125,28 @@ def get_lexi_and_sw_data(
 
         # print("Histogram data normalized against ground data.")
 
-    # Get the sum of the histogram data
-    hist_sum = np.nansum(hist)
+    x_offset = 271
+    y_offset = 24.8
+
+    # Compute the bin centres
+    x_centers = 0.5 * (xedges[:-1] + xedges[1:])
+    y_centers = 0.5 * (yedges[:-1] + yedges[1:])
+    # Create a meshgrid for the bin centers
+    X, Y = np.meshgrid(x_centers, y_centers)
+
+    # Compute the distances from the center
+    distances = np.sqrt((X - x_offset) ** 2 + (Y - y_offset) ** 2)
+
+    # Create a mask of the points within the circle of radius 4.5
+    mask = distances <= 4.5
+
+    # Sum the histogram data within the masked region
+    hist_sum = np.nansum(hist[mask])
+
+    # hist_sum_no_mask = np.nansum(hist)
+
+    # print(f"The sum of the histogram data within the circle is {hist_sum:.2f}\n ")
+    # print(f"The sum of the histogram data without any mask is {hist_sum_no_mask:.2f}\n ")
 
     # Depending on the themis spacecraft, get the corresponding data
     themis_file_name = f"../data/themis_data/csv/themis_{themis_sc}_esa_parameters_2025-03-16_to_2025-03-17_flux.csv"
@@ -249,8 +269,14 @@ def plot_themis_lexi_hist_time_series(
     # Get the correlation coefficient between THEMIS flux and LEXI histogram sum
     if sw_flux is not None and hist_sum is not None:
         # select the data only between the start and end time
-        sw_flux = sw_flux[(time_series >= start_time) & (time_series <= end_time)]
-        hist_sum = hist_sum[(time_series >= start_time) & (time_series <= end_time)]
+        start_time_timestamp = pd.to_datetime(start_time, utc=True)
+        end_time_timestamp = pd.to_datetime(end_time, utc=True)
+        sw_flux = sw_flux[
+            (time_series >= start_time_timestamp) & (time_series <= end_time_timestamp)
+        ]
+        hist_sum = hist_sum[
+            (time_series >= start_time_timestamp) & (time_series <= end_time_timestamp)
+        ]
         # Calculate the Pearson correlation coefficient
         if len(sw_flux) == 0 or len(hist_sum) == 0:
             print("No data available for correlation calculation.")
@@ -304,14 +330,14 @@ def plot_themis_lexi_hist_time_series(
     return None
 
 
-start_time = "2025-03-16T19:45:00Z"
-end_time = "2025-03-16T21:10:00Z"
+start_time = "2025-03-16T19:30:00Z"
+end_time = "2025-03-16T21:15:00Z"
 
-# Get the THEMIS and LEXI histogram data in 1 minute intervals
-freq = "1min"
+# Get the THEMIS and LEXI histogram data in 5 minute intervals
+freq = "5min"
 themis_sc = "c"
 
-recompute_data = False
+recompute_data = True
 if recompute_data:
 
     time_series = pd.date_range(start=start_time, end=end_time, freq=freq)
@@ -325,16 +351,22 @@ if recompute_data:
     print(
         f"Code execution time in UTC: {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}"
     )
-    for i, time in enumerate(time_series):
+    for i, time_val in enumerate(time_series):
         # Print the progress bar as percentage
         progress = (i + 1) / len(time_series) * 100
         print(f"Progress ==> {progress:.6f}%", end="\r")
-
-        hist_sum, themis_df_mean, themis_df_median, themis_df_median_time = get_lexi_and_sw_data(
-            start_time=time,
-            end_time=time + pd.Timedelta(minutes=5),
-            themis_sc=themis_sc,
-        )
+        start = time_val.isoformat()
+        end = (time_val + to_offset(freq)).isoformat()
+        try:
+            hist_sum, themis_df_mean, themis_df_median, themis_df_median_time = (
+                get_lexi_and_sw_data(
+                    start_time=start,
+                    end_time=end,
+                    themis_sc=themis_sc,
+                )
+            )
+        except Exception:
+            continue
         hist_sum_list.append(hist_sum)
         sw_np = themis_df_mean[f"th{themis_sc}_peer_density"]
         sw_vp = themis_df_mean[f"th{themis_sc}_peir_velocity_magnitude"]
@@ -396,5 +428,5 @@ plot_themis_lexi_hist_time_series(
     hist_sum=hist_sum,
     themis_sc=themis_sc,
     freq=freq,
-    x_limit=["2025-03-16T19:45:00Z", "2025-03-16T20:50:00Z"],
+    x_limit=["2025-03-16T19:35:00Z", "2025-03-16T20:50:00Z"],
 )
