@@ -143,7 +143,7 @@ def get_lexi_and_sw_data(
     # Sum the histogram data within the masked region
     hist_sum = np.nansum(hist[mask])
 
-    # hist_sum_no_mask = np.nansum(hist)
+    hist_sum_no_mask = np.nansum(hist)
 
     # print(f"The sum of the histogram data within the circle is {hist_sum:.2f}\n ")
     # print(f"The sum of the histogram data without any mask is {hist_sum_no_mask:.2f}\n ")
@@ -185,7 +185,7 @@ def get_lexi_and_sw_data(
         themis_df.index.get_loc(themis_df.index[len(themis_df) // 2])
     ]
 
-    return hist_sum, themis_df_mean, themis_df_median, themis_df_median_time
+    return hist_sum, themis_df_mean, themis_df_median, themis_df_median_time, hist_sum_no_mask
 
 
 def plot_themis_lexi_hist_time_series(
@@ -194,6 +194,7 @@ def plot_themis_lexi_hist_time_series(
     sw_vp=None,
     sw_flux=None,
     hist_sum=None,
+    hist_sum_no_mask=None,
     themis_sc="c",
     freq="5seconds",
     x_limit=None,
@@ -260,6 +261,8 @@ def plot_themis_lexi_hist_time_series(
 
     # Plot the LEXI histogram data
     ax[3].plot(time_series, hist_sum, label="Histogram Sum", color="red")
+    twin_ax3 = ax[3].twinx()
+    twin_ax3.plot(time_series, hist_sum_no_mask, label="Histogram Sum (No Mask)", color="orange")
     ax[3].set_ylabel("Histogram Sum", fontsize=14)
     ax[3].legend(loc="upper right", fontsize=10)
     ax[3].grid(True, linestyle="--", alpha=0.5)
@@ -277,7 +280,10 @@ def plot_themis_lexi_hist_time_series(
         hist_sum = hist_sum[
             (time_series >= start_time_timestamp) & (time_series <= end_time_timestamp)
         ]
-        # Calculate the Pearson correlation coefficient
+        hist_sum_no_mask = hist_sum_no_mask[
+            (time_series >= start_time_timestamp) & (time_series <= end_time_timestamp)
+        ]
+        # Calculate the Pearson correlation coefficient for hist_sum
         if len(sw_flux) == 0 or len(hist_sum) == 0:
             print("No data available for correlation calculation.")
             correlation = np.nan
@@ -297,12 +303,65 @@ def plot_themis_lexi_hist_time_series(
                 correlation = np.nan
                 spearman_correlation = np.nan
         correlation = np.corrcoef(sw_flux, hist_sum)[0, 1]
+
         # Get the spearman correlation
         spearman_correlation = stats.spearmanr(sw_flux, hist_sum).correlation
         ax[3].text(
             0.05,
             0.95,
             f"Pearson Correlation: {correlation:.2f}\nSpearman Correlation: {spearman_correlation:.2f}",
+            transform=ax[3].transAxes,
+            fontsize=12,
+            verticalalignment="top",
+        )
+    # Get the correlation coefficient for hist_sum_no_mask
+    if sw_flux is not None and hist_sum_no_mask is not None:
+        # select the data only between the start and end time
+        start_time_timestamp = pd.to_datetime(start_time, utc=True)
+        end_time_timestamp = pd.to_datetime(end_time, utc=True)
+        # sw_flux = sw_flux[
+        #     (time_series >= start_time_timestamp) & (time_series <= end_time_timestamp)
+        # ]
+        hist_sum_no_mask = hist_sum_no_mask[
+            (time_series[:-1] >= start_time_timestamp) & (time_series[:-1] <= end_time_timestamp)
+        ]
+        # Calculate the Pearson correlation coefficient for hist_sum_no_mask
+        if len(sw_flux) == 0 or len(hist_sum_no_mask) == 0:
+            print("No data available for correlation calculation.")
+            correlation_no_mask = np.nan
+            spearman_correlation_no_mask = np.nan
+        elif len(sw_flux) != len(hist_sum_no_mask):
+            print(
+                "Warning: The length of sw_flux and hist_sum_no_mask are not equal. "
+                "Correlation calculation may not be accurate."
+            )
+            min_length = min(len(sw_flux), len(hist_sum_no_mask))
+            sw_flux = sw_flux[:min_length]
+            hist_sum_no_mask = hist_sum_no_mask[:min_length]
+        else:
+            # Calculate the Pearson correlation coefficient
+            if np.all(np.isnan(sw_flux)) or np.all(np.isnan(hist_sum_no_mask)):
+                print("All values are NaN, cannot calculate correlation.")
+                correlation_no_mask = np.nan
+                spearman_correlation_no_mask = np.nan
+        correlation_no_mask = np.corrcoef(sw_flux, hist_sum_no_mask)[0, 1]
+
+        # Get the spearman correlation
+        spearman_correlation_no_mask = stats.spearmanr(sw_flux, hist_sum_no_mask).correlation
+
+        ax[3].text(
+            0.05,
+            0.85,
+            f"Pearson Correlation (No Mask): {correlation_no_mask:.2f}\nSpearman Correlation (No Mask): {spearman_correlation_no_mask:.2f}",
+            transform=ax[3].transAxes,
+            fontsize=12,
+            verticalalignment="top",
+        )
+
+        ax[3].text(
+            0.05,
+            0.05,
+            f"Pearson Correlation (No Mask): {correlation_no_mask:.2f}\nSpearman Correlation (No Mask): {spearman_correlation_no_mask:.2f}",
             transform=ax[3].transAxes,
             fontsize=12,
             verticalalignment="top",
@@ -316,6 +375,7 @@ def plot_themis_lexi_hist_time_series(
         # Set the x-axis limits to the start and end time of the time series
         ax[3].set_xlim([time_series[0], time_series[-1]])
         print(time_series[0], time_series[-1])
+    # ax[3].set_ylim(10000, 22000)
     folder_path = Path(f"../figures/lexi_sw/themis_{themis_sc}/")
     folder_path.mkdir(parents=True, exist_ok=True)
     file_name = (
@@ -337,11 +397,12 @@ end_time = "2025-03-16T21:15:00Z"
 freq = "5min"
 themis_sc = "c"
 
-recompute_data = True
+recompute_data = False
 if recompute_data:
 
     time_series = pd.date_range(start=start_time, end=end_time, freq=freq)
     hist_sum_list = []
+    hist_sum_no_mask_list = []
     sw_np_list = []
     sw_vp_list = []
     sw_flux_list = []
@@ -358,7 +419,7 @@ if recompute_data:
         start = time_val.isoformat()
         end = (time_val + to_offset(freq)).isoformat()
         try:
-            hist_sum, themis_df_mean, themis_df_median, themis_df_median_time = (
+            hist_sum, themis_df_mean, themis_df_median, themis_df_median_time, hist_sum_no_mask = (
                 get_lexi_and_sw_data(
                     start_time=start,
                     end_time=end,
@@ -368,6 +429,7 @@ if recompute_data:
         except Exception:
             continue
         hist_sum_list.append(hist_sum)
+        hist_sum_no_mask_list.append(hist_sum_no_mask)
         sw_np = themis_df_mean[f"th{themis_sc}_peer_density"]
         sw_vp = themis_df_mean[f"th{themis_sc}_peir_velocity_magnitude"]
         sw_flux = themis_df_mean[f"th{themis_sc}_peir_flux"]
@@ -380,6 +442,7 @@ if recompute_data:
 
     # Convert the lists to numpy arrays
     hist_sum = np.array(hist_sum_list)
+    hist_sum_no_mask = np.array(hist_sum_no_mask_list)
     sw_np = np.array(sw_np_list)
     sw_vp = np.array(sw_vp_list)
     sw_flux = np.array(sw_flux_list)
@@ -393,6 +456,7 @@ if recompute_data:
             "sw_vp": sw_vp,
             "sw_flux": sw_flux,
             "hist_sum": hist_sum,
+            "hist_sum_no_mask": hist_sum_no_mask,
         }
     )
     folder_path = Path("../data/lexi_sw/")
@@ -417,6 +481,7 @@ else:
     sw_vp = df["sw_vp"].values
     sw_flux = df["sw_flux"].values
     hist_sum = df["hist_sum"].values
+    hist_sum_no_mask = df["hist_sum_no_mask"].values
 
 
 # Plot the THEMIS and LEXI histogram data
@@ -426,7 +491,8 @@ plot_themis_lexi_hist_time_series(
     sw_vp=sw_vp,
     sw_flux=sw_flux,
     hist_sum=hist_sum,
+    hist_sum_no_mask=hist_sum_no_mask,
     themis_sc=themis_sc,
     freq=freq,
-    x_limit=["2025-03-16T19:35:00Z", "2025-03-16T20:50:00Z"],
+    x_limit=["2025-03-16T19:30:00Z", "2025-03-16T20:50:00Z"],
 )
