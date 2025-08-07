@@ -167,6 +167,8 @@ data/*
 figures/*
 movies/*
 /data_analysis/themis_data/*
+/data_analysis/data/*
+/data_analysis/figures/*
 
 pipeline/ramiz/calib/cxrb_fak1.fits
 

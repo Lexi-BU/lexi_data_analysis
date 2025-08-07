@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from dateutil import parser
-from matplotlib.ticker import FormatStrFormatter
 from spacepy.pycdf import CDF as cdf
 
 # Suppress user warnings from matplotlib
@@ -284,17 +283,29 @@ def plot_time_series(
 
 def plot_histogram(
     df=None,
+    dat_flat_field=None,
+    H_flat=None,
     start_time=None,
     end_time=None,
     x_key=None,
     y_key=None,
-    bins=100,
+    bins=200,
+    bin_range=[263, 281, 15, 33],
     cmap="viridis",
     norm_scale="log",
     time_normalization=False,
     data_folder_location=None,
     output_path="figures",
-    flat_field_data=False,
+    flat_field_correction=False,
+    v_min_orig=None,
+    v_max_orig=None,
+    v_min_flat=None,
+    v_max_flat=None,
+    v_min_result=None,
+    v_max_result=None,
+    plot_flat_field=False,
+    plot_result_hist=False,
+    verbose=False,
 ):
     """Plot a 2D histogram between two keys from the dataframe, optionally normalized by flat field
     data.
@@ -323,7 +334,7 @@ def plot_histogram(
         The folder location for the data files. Default is "data".
     output_path : str, optional
         The folder where the output figures will be saved. Default is "figures".
-    flat_field_data : bool, optional
+    flat_field_correction : bool, optional
         Whether to use flat field data for normalization.
 
     Returns
@@ -331,8 +342,14 @@ def plot_histogram(
     None
     """
 
+    # Convert time boundaries to UTC-aware timestamps
+    def to_utc(ts):
+        ts = pd.to_datetime(ts)
+        return ts.tz_localize("UTC") if ts.tzinfo is None else ts
+
     if df is None or df.empty:
-        print("No data provided. Attempting to read from files... \n")
+        if verbose:
+            print("No data provided. Attempting to read from files... \n")
         df = read_all_data_files(
             file_list=None,
             start_time=start_time,
@@ -345,14 +362,31 @@ def plot_histogram(
                 "end_time": end_time,
             },
         )
+    time_tolerance = datetime.timedelta(seconds=5)
+    # Check if the minimum and maximum value of index are within the specified range
+    if not (
+        df.index.min() >= to_utc(start_time) - time_tolerance
+        and df.index.max() <= to_utc(end_time) + time_tolerance
+    ):
+        if verbose:
+            print(
+                f"Warning: Data index range {df.index.min()} to {df.index.max()} is not within the specified time range {start_time} to {end_time}. \n Attempting to read additional data files..."
+            )
+            df = read_all_data_files(
+                file_list=None,
+                start_time=start_time,
+                end_time=end_time,
+                return_data_type="dataframe",
+                kwargs={
+                    "data_folder_location": data_folder_location,
+                    "version": "latest",
+                    "start_time": start_time,
+                    "end_time": end_time,
+                },
+            )
 
     if x_key is None or y_key is None:
         raise ValueError("Both x_key and y_key must be specified.")
-
-    # Convert time boundaries to UTC-aware timestamps
-    def to_utc(ts):
-        ts = pd.to_datetime(ts)
-        return ts.tz_localize("UTC") if ts.tzinfo is None else ts
 
     if start_time:
         df = df[df.index >= to_utc(start_time)]
@@ -360,7 +394,8 @@ def plot_histogram(
         df = df[df.index <= to_utc(end_time)]
 
     if df.empty:
-        print("No data available in the given time range. Exiting function. \n")
+        if verbose:
+            print("No data available in the given time range. Exiting function. \n")
         return
 
     x = df[x_key].values
@@ -378,88 +413,142 @@ def plot_histogram(
     # Compute original 2D histogram
     fig, ax = plt.subplots(figsize=(10, 8))
     # Temporary histogram to get values
-    H_orig, xedges, yedges = np.histogram2d(x, y, bins=bins, weights=weights)
+    H_orig, xedges, yedges = np.histogram2d(
+        x,
+        y,
+        bins=bins,
+        range=[[bin_range[0], bin_range[1]], [bin_range[2], bin_range[3]]],
+        weights=weights,
+    )
 
     if norm_scale == "log":
-        norm = mpl.colors.LogNorm(vmin=min(1, np.nanmin(H_orig)), vmax=np.nanmax(H_orig))
+        if v_min_orig is not None and v_max_orig is not None:
+            norm = mpl.colors.LogNorm(vmin=v_min_orig, vmax=v_max_orig)
+        else:
+            norm = mpl.colors.LogNorm(vmin=min(1, np.nanmin(H_orig)), vmax=np.nanmax(H_orig))
     else:
-        norm = mpl.colors.Normalize(vmin=np.nanmin(H_orig), vmax=np.nanmax(H_orig))
+        if v_min_orig is not None and v_max_orig is not None:
+            norm = mpl.colors.Normalize(vmin=v_min_orig, vmax=v_max_orig)
+        else:
+            norm = mpl.colors.Normalize(vmin=np.nanmin(H_orig), vmax=np.nanmax(H_orig))
 
-    H_orig, xedges, yedges, img = ax.hist2d(x, y, bins=bins, weights=weights, cmap=cmap, norm=norm)
+    H_orig, xedges_orig, yedges_orig, img = ax.hist2d(
+        x,
+        y,
+        bins=bins,
+        range=[[bin_range[0], bin_range[1]], [bin_range[2], bin_range[3]]],
+        weights=weights,
+        cmap=cmap,
+        norm=norm,
+    )
 
     # Prepare output folder
     Path(output_path).mkdir(parents=True, exist_ok=True)
 
-    if flat_field_data:
-        flat_field_path = "data/flat_field_data/lexi_l1c_flat_field_data_20240524_20240530.cdf"
-        print(f"Reading flat field data from {flat_field_path} \n")
-        with cdf(flat_field_path) as cdf_file:
-            flat_x = cdf_file[x_key][...]
-            flat_y = cdf_file[y_key][...]
-            flat_epoch = pd.to_datetime(cdf_file["Epoch"][...])
+    if flat_field_correction:
+        if dat_flat_field is None and H_flat is None:
+            flat_field_path = "data/flat_field_data/lexi_l1c_flat_field_data_20240524_20240530.cdf"
+            if verbose:
+                print(f"Reading flat field data from {flat_field_path} \n")
+            with cdf(flat_field_path) as cdf_file:
+                flat_x = cdf_file[x_key][...]
+                flat_y = cdf_file[y_key][...]
+                flat_epoch = pd.to_datetime(cdf_file["Epoch"][...])
+                flat_index = pd.DatetimeIndex(flat_epoch).tz_localize("UTC")
+        elif dat_flat_field is not None and H_flat is None:
+            if verbose:
+                print(f"Using provided flat field data from {dat_flat_field} \n")
+            flat_x = dat_flat_field[x_key][...]
+            flat_y = dat_flat_field[y_key][...]
+            flat_epoch = pd.to_datetime(dat_flat_field["Epoch"][...])
             flat_index = pd.DatetimeIndex(flat_epoch).tz_localize("UTC")
 
-        # Time-normalized weights if needed
-        if time_normalization:
-            flat_duration = (flat_index[-1] - flat_index[0]).total_seconds()
-            flat_weights = np.ones_like(flat_x) / flat_duration
-        else:
-            flat_weights = None
-
         # Compute flat field histogram
-        H_flat, _, _ = np.histogram2d(flat_x, flat_y, bins=[xedges, yedges], weights=flat_weights)
+        if H_flat is None:
+            # Time-normalized weights if needed
+            if time_normalization:
+                flat_duration = (flat_index[-1] - flat_index[0]).total_seconds()
+                flat_weights = np.ones_like(flat_x) / flat_duration
+            else:
+                flat_weights = None
 
-        # Plot and save flat field histogram
-        fig_ff, ax_ff = plt.subplots(figsize=(10, 8))
-        if norm_scale == "log":
-            norm = mpl.colors.LogNorm(vmin=1e-6, vmax=np.nanmax(H_flat))
-        else:
-            norm = mpl.colors.Normalize(vmin=np.nanmin(H_flat), vmax=np.nanmax(H_flat))
+            H_flat, _, _ = np.histogram2d(
+                flat_x,
+                flat_y,
+                bins=[xedges_orig, yedges_orig],
+                weights=flat_weights,
+            )
+        if plot_flat_field:
+            # Plot and save flat field histogram
+            fig_ff, ax_ff = plt.subplots(figsize=(10, 8))
+            if norm_scale == "log":
+                norm = mpl.colors.LogNorm(vmin=1e-6, vmax=np.nanmax(H_flat))
+            else:
+                norm = mpl.colors.Normalize(vmin=np.nanmin(H_flat), vmax=np.nanmax(H_flat))
 
-        mesh_ff = ax_ff.pcolormesh(xedges, yedges, H_flat.T, cmap=cmap, norm=norm)
-        cbar_ff = plt.colorbar(mesh_ff, ax=ax_ff)
-        cbar_ff.set_label(f"{unit_label} (flat field)")
-        ax_ff.set_xlabel(f"{x_key} [cm]" if "mcp" in x_key else f"{x_key} [deg]")
-        ax_ff.set_ylabel(f"{y_key} [cm]" if "mcp" in y_key else f"{y_key} [deg]")
-        ax_ff.set_aspect("equal", adjustable="box")
-        ax_ff.set_title(f"Flat Field Histogram of {y_key} vs {x_key}")
-        plt.tight_layout()
-        ff_name = f"histogram_{x_key}_vs_{y_key}_flat_field.png"
-        plt.savefig(Path(output_path) / ff_name, dpi=300, bbox_inches="tight", pad_inches=0.1)
-        print(f"Flat field histogram saved to {Path(output_path) / ff_name} \n")
+            mesh_ff = ax_ff.pcolormesh(xedges, yedges, H_flat.T, cmap=cmap, norm=norm)
+            cbar_ff = plt.colorbar(mesh_ff, ax=ax_ff)
+            cbar_ff.set_label(f"{unit_label} (flat field)")
+            ax_ff.set_xlabel(f"{x_key} [cm]" if "mcp" in x_key else f"{x_key} [deg]")
+            ax_ff.set_ylabel(f"{y_key} [cm]" if "mcp" in y_key else f"{y_key} [deg]")
+            ax_ff.set_aspect("equal", adjustable="box")
+            ax_ff.set_title(f"Flat Field Histogram of {y_key} vs {x_key}")
+            plt.tight_layout()
+            ff_name = f"histogram_{x_key}_vs_{y_key}_flat_field.png"
+            plt.savefig(Path(output_path) / ff_name, dpi=300, bbox_inches="tight", pad_inches=0.1)
+            if verbose:
+                print(f"Flat field histogram saved to {Path(output_path) / ff_name} \n")
 
         # Normalize by flat field histogram
         with np.errstate(divide="ignore", invalid="ignore"):
             H_result = np.divide(H_orig, H_flat)
             H_result[~np.isfinite(H_result)] = 0
 
-        # Plot normalized histogram
-        fig_norm, ax_norm = plt.subplots(figsize=(10, 8))
-        if norm_scale == "log":
-            norm = mpl.colors.LogNorm(vmin=1e-2, vmax=np.nanmax(H_result))
-        else:
-            norm = mpl.colors.Normalize(vmin=np.nanmin(H_result), vmax=np.nanmax(H_result))
+        if plot_result_hist:
+            # Plot normalized histogram
+            fig_norm, ax_norm = plt.subplots(figsize=(10, 8))
+            if norm_scale == "log":
+                if v_min_result is not None and v_max_result is not None:
+                    norm = mpl.colors.LogNorm(vmin=v_min_result, vmax=v_max_result)
+                else:
+                    norm = mpl.colors.LogNorm(vmin=1e-2, vmax=np.nanmax(H_result))
+            else:
+                if v_min_result is not None and v_max_result is not None:
+                    norm = mpl.colors.Normalize(vmin=v_min_result, vmax=v_max_result)
+                else:
+                    norm = mpl.colors.Normalize(vmin=np.nanmin(H_result), vmax=np.nanmax(H_result))
 
-        mesh_norm = ax_norm.pcolormesh(xedges, yedges, H_result.T, cmap=cmap, norm=norm)
-        cbar_norm = plt.colorbar(mesh_norm, ax=ax_norm)
-        cbar_norm.set_label(f"{unit_label} (normalized)")
-        ax_norm.set_xlabel(f"{x_key} [cm]" if "mcp" in x_key else f"{x_key} [deg]")
-        ax_norm.set_ylabel(f"{y_key} [cm]" if "mcp" in y_key else f"{y_key} [deg]")
-        ax_norm.set_aspect("equal", adjustable="box")
-        ax_norm.set_title(f"Flat-Field Normalized 2D Histogram of {y_key} vs {x_key}")
-        plt.tight_layout()
-        norm_name = f"histogram_{x_key}_vs_{y_key}_normalized.png"
-        plt.savefig(Path(output_path) / norm_name, dpi=300, bbox_inches="tight", pad_inches=0.1)
-        print(f"Normalized histogram saved to {Path(output_path) / norm_name} \n")
+            mesh_norm = ax_norm.pcolormesh(xedges, yedges, H_result.T, cmap=cmap, norm=norm)
+            cbar_norm = plt.colorbar(mesh_norm, ax=ax_norm)
+            cbar_norm.set_label(f"{unit_label} (normalized)")
+            ax_norm.set_xlabel(f"{x_key} [cm]" if "mcp" in x_key else f"{x_key} [deg]")
+            ax_norm.set_ylabel(f"{y_key} [cm]" if "mcp" in y_key else f"{y_key} [deg]")
+            ax_norm.set_aspect("equal", adjustable="box")
+            ax_norm.set_title(f"Flat-Field Normalized 2D Histogram of {y_key} vs {x_key}")
+            plt.tight_layout()
+            norm_name = f"histogram_{x_key}_vs_{y_key}_normalized.png"
+            plt.savefig(Path(output_path) / norm_name, dpi=300, bbox_inches="tight", pad_inches=0.1)
+            if verbose:
+                print(f"Normalized histogram saved to {Path(output_path) / norm_name} \n")
     else:
-        # If not flat field corrected, save original histogram
-        cbar = plt.colorbar(img, ax=ax)
-        cbar.set_label(unit_label)
-        ax.set_xlabel(f"{x_key} [cm]" if "mcp" in x_key else f"{x_key} [deg]")
-        ax.set_ylabel(f"{y_key} [cm]" if "mcp" in y_key else f"{y_key} [deg]")
-        ax.set_aspect("equal", adjustable="box")
-        ax.set_title(f"2D Histogram of {y_key} vs {x_key}")
-        plt.tight_layout()
-        orig_name = f"histogram_{x_key}_vs_{y_key}.png"
-        plt.savefig(Path(output_path) / orig_name, dpi=300, bbox_inches="tight", pad_inches=0.1)
-        print(f"Histogram saved to {Path(output_path) / orig_name} \n")
+        if plot_result_hist:
+            # If not flat field corrected, save original histogram
+            cbar = plt.colorbar(img, ax=ax)
+            cbar.set_label(unit_label)
+            ax.set_xlabel(f"{x_key} [cm]" if "mcp" in x_key else f"{x_key} [deg]")
+            ax.set_ylabel(f"{y_key} [cm]" if "mcp" in y_key else f"{y_key} [deg]")
+            ax.set_aspect("equal", adjustable="box")
+            ax.set_title(f"2D Histogram of {y_key} vs {x_key}")
+            plt.tight_layout()
+            orig_name = f"histogram_{x_key}_vs_{y_key}.png"
+            plt.savefig(Path(output_path) / orig_name, dpi=300, bbox_inches="tight", pad_inches=0.1)
+            if verbose:
+                print(f"Histogram saved to {Path(output_path) / orig_name} \n")
+
+    return {
+        "H_orig": H_orig,
+        "H_flat": H_flat if flat_field_correction else None,
+        "H_result": H_result if flat_field_correction else H_orig,
+        "xedges": xedges_orig if flat_field_correction else xedges,
+        "yedges": yedges_orig if flat_field_correction else yedges,
+    }
