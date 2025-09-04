@@ -7,14 +7,14 @@ from moviepy import ImageSequenceClip
 from PIL import Image
 
 # Define the folder containing the PNG images
-image_folder = "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_pipeline/figures/exposure_maps/bg_corrected/shifted/5min/"
+image_folder = "/home/vetinari/Desktop/git/Lexi-Bu/lexi_data_pipeline/figures/exposure_maps/bg_corrected/from_l2/"
 
 # Define the start and end times
 start_time = "2025-03-16-19-45-00"
 end_time = "2025-03-16-21-15-00"
 
 # Define the frame rate (frames per second)
-frame_rate = 10
+frame_rate = 5
 
 # Convert the start and end times to datetime objects for comparison
 # start_time_dt = datetime.strptime(start_time, "%Y-%m-%d_%H-%M-%S")
@@ -74,12 +74,12 @@ output_folder = Path(output_folder).expanduser().resolve()
 output_folder.mkdir(parents=True, exist_ok=True)
 # output_file = f"output_video_{start_time}_{end_time}.mp4"
 # output_file_gif = f"output_video_{start_time}_{end_time}_{frame_rate}.gif"
-output_file = f"exposure_time_series_no_shift.mp4"
+output_file = f"exposure_time_series_all.mp4"
 # output_file_gif = (
 #     f"line_profiles_{start_time.replace(':', '-')}_to_{end_time.replace(':', '-')}_{frame_rate}.gif"
 # )
 
-clip.write_videofile(output_folder / output_file, codec="libx264")
+clip.write_videofile(output_folder / output_file, codec="libx264")  # , fps=frame_rate)
 # clip.write_gif(output_folder / output_file_gif, fps=frame_rate)
 
 # Cleanup temp files
