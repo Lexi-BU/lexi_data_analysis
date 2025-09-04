@@ -267,7 +267,7 @@ def update_graph(shift_np, shift_vp, shift_flux, log_toggle):
     fig.update_xaxes(range=[start_time, end_time])
 
     fig.update_layout(
-        height=800,
+        height=1000,
         title="Interactive Shift & Correlation Viewer",
         template="plotly_dark",
         showlegend=True,

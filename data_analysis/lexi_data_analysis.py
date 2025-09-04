@@ -48,3 +48,5 @@ results = ldaf.plot_histogram(
 H_orig = results["H_orig"]
 H_flat = results["H_flat"]
 H_result = results["H_result"]
+xedges = results["xedges"]
+yedges = results["yedges"]

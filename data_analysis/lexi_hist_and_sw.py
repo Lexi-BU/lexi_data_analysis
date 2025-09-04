@@ -77,7 +77,7 @@ def get_lexi_and_sw_data(
             ground_hist = np.where(ground_hist == 0, np.nan, ground_hist)
 
             # Shift ground_hist n_shift_bin bins to the left
-            ground_hist = np.(ground_hist, shift=n_shift_bin_x, axis=0)  # y-direction
+            ground_hist = np.roll(ground_hist, shift=n_shift_bin_x, axis=0)  # y-direction
             ground_hist = np.roll(ground_hist, shift=n_shift_bin_y, axis=1)  # x-direction
 
             if n_shift_bin_y > 0:
