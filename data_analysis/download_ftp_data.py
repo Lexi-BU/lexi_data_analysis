@@ -102,12 +102,10 @@ def download_lexi_data(
 # Start time valid values are from 2025-01-16T00:00:00Z to 2025-03-16T22:00:00Z.
 # End time valid values are from 2024-10-16T00:00:00Z to 2025-03-16T22:00:00Z.
 # Valid data_level values are "L1a", "L1b", "L1c".
-# NOTE: At present, the L1c data is only for sampling purposes and does not contain any actual data.
-# The local_dir is the directory where the downloaded files will be stored.
 if __name__ == "__main__":
     download_lexi_data(
         start_time="2025-03-16T18:00:00Z",
         end_time="2025-03-16T22:00:00Z",
         data_level="L1b",
-        local_dir=Path("~/Downloads/L1b_data"),
+        local_dir=Path("./Data/L1b_data"),
     )
