@@ -253,7 +253,9 @@ def plot_time_series(
 
     # Create figure with subplots
     n_plots = len(keys)
-    fig, axs = plt.subplots(n_plots, 1, figsize=(12, 3 * n_plots), sharex=True)
+    # Set the theme to dark background
+    plt.style.use("dark_background")
+    fig, axs = plt.subplots(n_plots, 1, figsize=(24, 3 * n_plots), sharex=True)
 
     if n_plots == 1:
         axs = [axs]  # Ensure axs is iterable
@@ -264,15 +266,43 @@ def plot_time_series(
     else:  # "Epoch_unix"
         x = df["Epoch_unix"]
 
-    for ax, key in zip(axs, keys):
+    # Set the base font size for all plots
+    base_font_size = 12
+
+    color_list = plt.cm.get_cmap("tab10", len(keys)).colors
+    for ax, key, color in zip(axs, keys, color_list):
         print(f"Plotting {key}...")
-        ax.plot(x, df[key], label=key)
-        ax.set_ylabel(key)
-        ax.legend(loc="upper right")
+        ax.plot(x, df[key], label=key, color=color, linewidth=0.7)
+        # ax.scatter(x, df[key], label=key, s=1, color=color, alpha=0.7)
+        ax.set_ylabel(key, fontsize=1.5 * base_font_size)
+        # ax.legend(loc="upper right", fontsize=base_font_size)
         ax.grid(True)
 
-    axs[-1].set_xlabel(f"{x_axis} [UTC]")
-    fig.suptitle("Time Series Plot", fontsize=16)
+    axs[-1].set_xlabel(
+        f"{x_axis} [UTC] starting at {start_time:%Y-%m-%d %H:%M:%S}", fontsize=2.5 * base_font_size
+    )
+    fig.suptitle(
+        f"Time Series Plot\n {start_time:%Y-%m-%d %H:%M:%S} to {end_time:%Y-%m-%d %H:%M:%S} UTC",
+        fontsize=2 * base_font_size,
+    )
+    # Set the tick label size for all axes
+    for ax in axs:
+        ax.tick_params(axis="both", which="major", labelsize=base_font_size)
+        if x_axis == "Epoch":
+            ax.xaxis.set_major_formatter(mpl.dates.DateFormatter("%H:%M:%S"))
+            # Rotate x-axis tick labels for better readability
+            plt.setp(ax.get_xticklabels(), rotation=25, ha="right")
+            # Set the x-axis tick label font size
+            for label in ax.get_xticklabels(which="major"):
+                label.set_fontsize(1.6 * base_font_size)
+        else:
+            ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+            ax.ticklabel_format(
+                axis="x", style="sci", scilimits=(0, 0), fontsize=1.6 * base_font_size
+            )
+    # Set the x-axis limits
+    if x_axis == "Epoch":
+        axs[-1].set_xlim([start_time, end_time])
     plt.tight_layout(rect=[0, 0.03, 1, 0.97])
     # Make sure that the output directory exists
     Path(output_path).mkdir(parents=True, exist_ok=True)
