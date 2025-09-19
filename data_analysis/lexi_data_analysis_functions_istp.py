@@ -721,7 +721,7 @@ def plot_on_ra_dec(
 
     # Force scientific notation with offset at the top
     formatter = ScalarFormatter(useMathText=True)
-    formatter.set_scientific(True)
+    # formatter.set_scientific(True)
     # formatter.set_powerlimits((-1, 1))  # force sci notation outside [-1e-3, 1e3]
     cbar.ax.yaxis.set_major_formatter(formatter)
     # Hide minor ticks
@@ -776,7 +776,7 @@ def plot_exposure_and_counts(dat: dict, f: str):
         np.asarray(dat["exposure_map"][...])[0],
         time_range=time_range,
         title="Exposure Map",
-        cbar_title="Exposure Time (s)",
+        cbar_title="Exposure Time [s]",
         norm="log",
         vmin=1e0,
         vmax=3e2,
@@ -797,32 +797,32 @@ def plot_exposure_and_counts(dat: dict, f: str):
         axs[0, 2],
         RAcorn,
         DECcorn,
-        np.asarray(dat["background_map"][...])[0],
+        np.asarray(dat["total_background_map"][...])[0] / np.asarray(dat["exposure_map"][...])[0],
         title="Background Map",
-        cbar_title="Counts/pixel",
+        cbar_title="Counts/s/$deg^2$",
         time_range=time_range,
         norm="log",
-        vmin=1e-3,
-        vmax=1e-1,
+        vmin=1e-5,
+        vmax=1e-3,
     )
     plot_on_ra_dec(
         axs[1, 0],
         RAcorn,
         DECcorn,
-        np.asarray(dat["lexi_hist"][...])[0],
+        np.asarray(dat["lexi_histogram"][...])[0],
         time_range=time_range,
         title="Raw Counts",
-        cbar_title="Counts/sec",
+        cbar_title="Counts/s/$deg^2$",
         norm="log",
     )
     plot_on_ra_dec(
         axs[1, 1],
         RAcorn,
         DECcorn,
-        np.asarray(dat["lexi_histogram_bgnd_corrected"][...])[0],
+        np.asarray(dat["lexi_histogram_background_corrected"][...])[0],
         time_range=time_range,
         title="Background-Corrected Counts",
-        cbar_title="Counts/sec",
+        cbar_title="Counts/s/$deg^2$",
         norm="log",
     )
 
@@ -830,10 +830,10 @@ def plot_exposure_and_counts(dat: dict, f: str):
         axs[1, 2],
         RAcorn,
         DECcorn,
-        np.asarray(dat["lexi_histogram_bgnd_flat_corrected"][...])[0],
+        np.asarray(dat["lexi_histogram_background_flatfield_corrected"][...])[0],
         time_range=time_range,
         title="Background & Flat-Field Corrected Counts",
-        cbar_title="Counts/sec",
+        cbar_title="Counts/s/$deg^2$",
         norm="log",
     )
 

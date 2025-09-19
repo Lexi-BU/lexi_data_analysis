@@ -7,12 +7,12 @@ from moviepy import ImageSequenceClip
 from PIL import Image
 
 # Inputs
-image_folder = "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_pipeline/figures/exposure_maps/bg_corrected/from_l2/v3/"
+image_folder = "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_pipeline/pipeline/figures/exposure_maps/bg_corrected/from_l2/new/"
 start_time = "2025-03-16-19-00-00"
 end_time = "2025-03-16-21-15-00"
 
 output_format = "gif"  # "mp4" or "gif"
-frame_rate = 2  # fps for both mp4 and gif
+frame_rate = 1  # fps for both mp4 and gif
 
 
 def _write_gif_compat(clip, out_path, fps):
@@ -50,7 +50,7 @@ clip = ImageSequenceClip(images, fps=frame_rate)
 # Output
 output_folder = Path("../movies/").expanduser().resolve()
 output_folder.mkdir(parents=True, exist_ok=True)
-stem = f"exposure_time_series_all_{start_time}_{end_time}_v3"
+stem = f"updated_exposure_time_series_all_{start_time}_{end_time}_v3"
 
 if output_format.lower() == "mp4":
     out_path = output_folder / f"{stem}.mp4"
