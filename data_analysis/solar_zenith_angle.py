@@ -27,8 +27,8 @@ observer_lat = 0  # Earth obs latitude
 observer_lon = 90  # Earth obs longitude
 observer_alt = 0.0
 
-start_time = datetime(2025, 3, 2, 8, 0, 0)
-end_time = datetime(2025, 3, 16, 22, 0, 0)
+start_time = datetime(2025, 3, 2, 9, 34, 0)
+end_time = datetime(2025, 3, 18, 8, 34, 0)
 moon_info = pylunar.MoonInfo(
     [observer_lat, 0, 0], [observer_lon, 0, 0]
 )  # Create the moon for PyLunar
@@ -44,7 +44,7 @@ time_range = pd.date_range(start=start_time, end=end_time, freq=frequency)
 BGM1 = pylunar.LunarFeature(
     name="BGM1",
     diameter=0.001,
-    latitude=18.562,
+    latitude=18.56,
     longitude=61.81,
     delta_latitude=0,
     delta_longitude=0,

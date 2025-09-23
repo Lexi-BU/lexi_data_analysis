@@ -11,8 +11,8 @@ image_folder = "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_pipeline/pipeline
 start_time = "2025-03-16-19-00-00"
 end_time = "2025-03-16-21-15-00"
 
-output_format = "gif"  # "mp4" or "gif"
-frame_rate = 1  # fps for both mp4 and gif
+output_format = "mp4"  # "mp4" or "gif"
+frame_rate = 5  # fps for both mp4 and gif
 
 
 def _write_gif_compat(clip, out_path, fps):
