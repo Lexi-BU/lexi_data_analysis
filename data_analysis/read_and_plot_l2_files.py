@@ -376,7 +376,7 @@ def plot_line_profile(
         ax.text(
             0.01,
             0.01,
-            f"y = {coeffs[0]:.3f}x + {coeffs[1]:.3f}\nR² = {r_squared:.3f}, resid = {ss_tot:.3e}",
+            f"y = {coeffs[0]:.3e}x + {coeffs[1]:.3e}\nR² = {r_squared:.3e}, resid = {ss_tot:.3e}",
             transform=ax.transAxes,
             fontsize=14,
             verticalalignment="bottom",
@@ -400,6 +400,7 @@ def plot_line_profile(
     ax.set_ylabel(ylabel if ylabel else "Elevation [deg]")
     if xlim:
         ax.set_xlim(xlim)
+        ax.set_xscale("log")
     else:
         ax.set_xlim(left=np.nanmin(profile) * 0.9)
         ax.set_xlim(right=np.nanmax(profile) * 1.1)
@@ -469,6 +470,28 @@ for key in keys_to_add:
             else "datetime64[ns, UTC]"
         )
     )
+
+# Themis flux file:
+themis_spc = "c"
+flux_file_name = (
+    f"../data/lexi_themis_analysis/lexi_themis_{themis_spc}_analysis_lexi_spacecraft.csv"
+)
+if themis_spc == "b":
+    wake_time = "2025-03-16 20:47"
+elif themis_spc == "c":
+    wake_time = "2025-03-16 20:55"
+
+wake_time = pd.to_datetime(wake_time, utc=True)
+
+flux_df = pd.read_csv(flux_file_name)
+# Set Epoch as datetime index
+flux_df["Epoch"] = pd.to_datetime(flux_df["Epoch"], utc=True)
+flux_df.set_index("Epoch", inplace=True)
+flux_df.sort_index(inplace=True)
+# Find the min and max flux before the wake time
+max_flux = flux_df.loc[flux_df.index < wake_time, f"th{themis_spc}_peef_flux"].max()
+min_flux = flux_df.loc[flux_df.index < wake_time, f"th{themis_spc}_peef_flux"].min()
+
 for i, f in enumerate(l2_files[:]):
     dat = cdf(f)
 
@@ -486,6 +509,11 @@ for i, f in enumerate(l2_files[:]):
     t0 = pd.to_datetime(dat["epoch_start"][...][0], utc=True)
     t1 = pd.to_datetime(dat["epoch_end"][...][0], utc=True)
     data_df.loc[len(data_df)] = {"start_time": t0, "end_time": t1}
+
+    flux_val = flux_df.loc[(flux_df.index >= t0) & (flux_df.index <= t1)]
+    # Get the average flux value for the time range
+    avg_flux = flux_val[f"th{themis_spc}_peef_flux"].mean()
+
     # Set the plot theme to dark
     plt.style.use("dark_background")
     # Plot the exposure maps and counts
@@ -532,14 +560,15 @@ for i, f in enumerate(l2_files[:]):
         vmin=1e-3,
         vmax=1e0,
     )
-    x_lim = (30, 110)
+    x_lim = (30 / max_flux, 110 / min_flux)
     # Plot the line profiles on the bottom row
     _, data_df = plot_line_profile(
         data_df,
         axs[1, 0],
         np.asarray(dat["lexi_image"][...])[0]
         * np.asarray(dat["exposure_map"][...])[0]
-        * np.asarray(dat["pixel_area"][...])[0],
+        * np.asarray(dat["pixel_area"][...])[0]
+        / avg_flux,
         AZcorn,
         ELcorn,
         title="Line Profile",
@@ -553,7 +582,8 @@ for i, f in enumerate(l2_files[:]):
         axs[1, 1],
         np.asarray(dat["lexi_image_background_corrected"][...])[0]
         * np.asarray(dat["exposure_map"][...])[0]
-        * np.asarray(dat["pixel_area"][...])[0],
+        * np.asarray(dat["pixel_area"][...])[0]
+        / avg_flux,
         AZcorn,
         ELcorn,
         title="Line Profile",
@@ -567,7 +597,8 @@ for i, f in enumerate(l2_files[:]):
         axs[1, 2],
         np.asarray(dat["lexi_image_background_flatfield_corrected"][...])[0]
         * np.asarray(dat["exposure_map"][...])[0]
-        * np.asarray(dat["pixel_area"][...])[0],
+        * np.asarray(dat["pixel_area"][...])[0]
+        / avg_flux,
         AZcorn,
         ELcorn,
         title="Line Profile",
@@ -600,7 +631,7 @@ for i, f in enumerate(l2_files[:]):
         ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
         ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
 
-    figure_path = Path("../figures/line_profiles/bg_corrected/from_l2/az_el/1min/")
+    figure_path = Path("../figures/line_profiles/bg_corrected/from_l2/az_el/1min/flux_avg/")
     figure_path.mkdir(parents=True, exist_ok=True)
     fig.savefig(
         figure_path / (Path(f).stem + "_exposure_accounted_az_el.png"),
@@ -617,6 +648,6 @@ for i, f in enumerate(l2_files[:]):
 data_folder = Path("../data/line_profile_data/bg_corrected/from_l2/")
 data_folder.mkdir(parents=True, exist_ok=True)
 data_df.to_csv(
-    data_folder / "line_profile_fit_parameters_bg_corrected_1min.csv",
+    data_folder / "line_profile_fit_parameters_bg_corrected_1min_flux_avg.csv",
     index=False,
 )

@@ -13,11 +13,18 @@ lexi_ephemera_df = pd.read_csv(lexi_ephemera_file)
 lexi_ephemera_df["Epoch"] = pd.to_datetime(lexi_ephemera_df["Epoch"], utc=True)
 lexi_ephemera_df.set_index("Epoch", inplace=True)
 lexi_ephemera_df.sort_index(inplace=True)
+lexi_ephemera_df["lexi_sc_pos_gse_r"] = np.sqrt(
+    lexi_ephemera_df["lexi_sc_pos_gse_x"] ** 2
+    + lexi_ephemera_df["lexi_sc_pos_gse_y"] ** 2
+    + lexi_ephemera_df["lexi_sc_pos_gse_z"] ** 2
+)
 
 # Resample the data to 1-minute intervals using time interpolation
 lexi_ephemera_df = lexi_ephemera_df.resample("1min").interpolate(method="time")
 
 themis_spc = "c"  # THEMIS spacecraft to use
+
+# Wake: B : 20:47, C: 20:55
 themis_ephemera_file = Path(
     f"/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/data/themis_l2_electron_params/themis_{themis_spc}_l2_electron_params_2025-03-16T19:00:00_to_2025-03-16T22:00:00.csv"
 )
@@ -39,6 +46,12 @@ lexi_ephemera_df = lexi_ephemera_df[
 themis_ephemera_df = themis_ephemera_df[
     (themis_ephemera_df.index >= start_time) & (themis_ephemera_df.index <= end_time)
 ]
+themis_ephemera_df["themis_sc_pos_gse_r"] = np.sqrt(
+    themis_ephemera_df["th" + themis_spc + "_pos_gse_x"] ** 2
+    + themis_ephemera_df["th" + themis_spc + "_pos_gse_y"] ** 2
+    + themis_ephemera_df["th" + themis_spc + "_pos_gse_z"] ** 2
+)
+
 # Merge the two dataframes on the datetime index
 merged_df = pd.merge_asof(
     lexi_ephemera_df.sort_index(),
@@ -66,22 +79,8 @@ merged_df = merged_df.interpolate(method="time")
 # Earth radius in km
 earth_radius_km = 6371.0
 # Find the distance between Lexi and THEMIS
-distance = np.sqrt(
-    (merged_df["lexi_sc_pos_gse_x"] - merged_df["th" + themis_spc + "_pos_gse_x"] * earth_radius_km)
-    ** 2
-    + (
-        merged_df["lexi_sc_pos_gse_y"]
-        - merged_df["th" + themis_spc + "_pos_gse_y"] * earth_radius_km
-    )
-    ** 2
-    + (
-        merged_df["lexi_sc_pos_gse_z"]
-        - merged_df["th" + themis_spc + "_pos_gse_z"] * earth_radius_km
-    )
-    ** 2
-)
+distance = merged_df["lexi_sc_pos_gse_r"] - merged_df["themis_sc_pos_gse_r"] * earth_radius_km
 merged_df["distance_lexi_themis_km"] = distance
-
 
 # Compute the time taken for solar wind to travel from THEMIS to Lexi
 # Solar wind speed is: th" + themis_spc + "_peef_velocity_gse_mag
@@ -89,7 +88,68 @@ merged_df["time_delay_seconds"] = (
     merged_df["distance_lexi_themis_km"] / merged_df["th" + themis_spc + "_peef_velocity_gse_mag"]
 )
 
+# Replace all the NaN values in each column with the next valid observation
+merged_df = merged_df.fillna(method="bfill")
+
+# Shift all the themis data by the time delay (and all delay in the name) (take care of NaN)
+# for col in themis_ephemera_df.columns:
+#     if col.startswith("th"):
+#         merged_df[col + "_delay"] = merged_df[col].shift(
+#             periods=merged_df["time_delay_seconds"].astype(int), freq="S"
+#         )
+
 save_folder = Path("../data/lexi_themis_analysis/")
 save_folder.mkdir(parents=True, exist_ok=True)
 output_file = save_folder / f"lexi_themis_{themis_spc}_analysis_lexi_spacecraft.csv"
 merged_df.to_csv(output_file)
+
+
+# Plot the distance and time delay
+plt.figure(figsize=(12, 6))
+
+plt.subplot(2, 1, 1)
+plt.plot(merged_df.index, merged_df["distance_lexi_themis_km"], label="Distance (km)")
+plt.ylabel("Distance (km)")
+plt.legend()
+plt.grid(True)
+
+plt.subplot(2, 1, 2)
+plt.plot(merged_df.index, merged_df["time_delay_seconds"], label="Time Delay (s)", color="orange")
+plt.ylabel("Time Delay (s)")
+plt.xlabel("Time")
+plt.legend()
+plt.grid(True)
+
+plt.tight_layout()
+plt.show()
+
+
+# Plot all themis parameters (density, flux, and speed)
+keys_to_plot = [
+    "th" + themis_spc + "_peef_density",
+    "th" + themis_spc + "_peef_flux",
+    "th" + themis_spc + "_peef_velocity_gse_mag",
+]
+# Define the plotting area
+plt.figure(figsize=(15, 10))
+plt.subplot(3, 1, 1)
+plt.plot(merged_df.index, merged_df[keys_to_plot[0]], label=keys_to_plot[0])
+plt.ylabel(keys_to_plot[0])
+plt.legend()
+plt.grid(True)
+
+plt.subplot(3, 1, 2)
+plt.plot(merged_df.index, merged_df[keys_to_plot[1]], label=keys_to_plot[1])
+plt.ylabel(keys_to_plot[1])
+plt.legend()
+# plt.grid(True)
+
+plt.subplot(3, 1, 3)
+plt.plot(merged_df.index, merged_df[keys_to_plot[2]], label=keys_to_plot[2])
+plt.ylabel(keys_to_plot[2])
+plt.legend()
+# plt.grid(True)
+
+
+plt.tight_layout()
+plt.show()
