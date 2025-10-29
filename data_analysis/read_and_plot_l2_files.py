@@ -31,13 +31,6 @@ def keep_highest_versions(paths):
     return [best[k][1] for k in sorted(best)]
 
 
-# Example
-all_l2_files = sorted(
-    glob.glob("/mnt/cephadrius/bu_research/lexi_data/l2/1min/clps-bgm1_lexi_l2-images*.cdf")
-)
-l2_files = keep_highest_versions(all_l2_files)
-
-
 def centers_to_corners_2d(ra_c, dec_c):
     """
     ra_c, dec_c: (H, W) center maps in degrees.
@@ -398,9 +391,12 @@ def plot_line_profile(
     ax.set_title(title)
     ax.set_xlabel(xlabel if xlabel else "Counts")
     ax.set_ylabel(ylabel if ylabel else "Elevation [deg]")
+    # Make vertical orange line at the minimum and maximum profile values
+    ax.axvline(x=np.nanmin(profile), color="orange", linestyle="--", linewidth=1.5)
+    ax.axvline(x=np.nanmax(profile), color="orange", linestyle="--", linewidth=1.5)
     if xlim:
         ax.set_xlim(xlim)
-        ax.set_xscale("log")
+        ax.set_xscale("linear")
     else:
         ax.set_xlim(left=np.nanmin(profile) * 0.9)
         ax.set_xlim(right=np.nanmax(profile) * 1.1)
@@ -492,6 +488,21 @@ flux_df.sort_index(inplace=True)
 max_flux = flux_df.loc[flux_df.index < wake_time, f"th{themis_spc}_peef_flux"].max()
 min_flux = flux_df.loc[flux_df.index < wake_time, f"th{themis_spc}_peef_flux"].min()
 
+
+# Example
+time_res = "105min"
+all_l2_files = sorted(
+    glob.glob(f"/mnt/cephadrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf")
+)
+l2_files = keep_highest_versions(all_l2_files)
+
+norm_lexi = "log"
+v_min_lexi = 1e-1
+v_max_lexi = 1e2
+
+line_x_min = 40
+line_x_max = 100
+
 for i, f in enumerate(l2_files[:]):
     dat = cdf(f)
 
@@ -522,53 +533,63 @@ for i, f in enumerate(l2_files[:]):
     fig.subplots_adjust(hspace=0.0, wspace=0.0)
     # Set the default font size
     mpl.rcParams.update({"font.size": 16})
-    fig.suptitle(f"LEXI L2 Data from {Path(f).name}", fontsize=20)
+    file_name = Path(f).name.split("_")[-2]
+    hh = int(file_name[8:10])
+    mm = int(file_name[10:12])
+    fig.suptitle(f"LEXI L2 Data from {hh:02d}:{mm:02d} for {time_res}", fontsize=20)
 
     plot_on_az_el(
         axs[0, 0],
         AZcorn,
         ELcorn,
-        np.asarray(dat["lexi_image"][...])[0],
+        np.asarray(dat["lexi_image"][...])[0] * np.asarray(dat["exposure_map"][...])[0],
+        # / np.asarray(dat["exposure_map"][...])[0]
+        # / np.asarray(dat["pixel_area"][...])[0],
         time_range=time_range,
         title="Raw Counts",
         cbar_title="Counts/s/$deg^2$",
-        norm="log",
-        vmin=1e-3,
-        vmax=1e0,
+        norm=norm_lexi,
+        vmin=v_min_lexi,
+        vmax=v_max_lexi,
     )
     plot_on_az_el(
         axs[0, 1],
         AZcorn,
         ELcorn,
-        np.asarray(dat["lexi_image_background_corrected"][...])[0],
+        np.asarray(dat["lexi_image_background_corrected"][...])[0]
+        * np.asarray(dat["exposure_map"][...])[0],
+        # / np.asarray(dat["exposure_map"][...])[0]
+        # / np.asarray(dat["pixel_area"][...])[0],
         time_range=time_range,
         title="Background-Corrected Counts",
         cbar_title="Counts/s/$deg^2$",
-        norm="log",
-        vmin=1e-3,
-        vmax=1e0,
+        norm=norm_lexi,
+        vmin=v_min_lexi,
+        vmax=v_max_lexi,
     )
     plot_on_az_el(
         axs[0, 2],
         AZcorn,
         ELcorn,
-        np.asarray(dat["lexi_image_background_flatfield_corrected"][...])[0],
+        np.asarray(dat["lexi_image_background_flatfield_corrected"][...])[0]
+        * np.asarray(dat["exposure_map"][...])[0],
+        # / np.asarray(dat["exposure_map"][...])[0]
+        # / np.asarray(dat["pixel_area"][...])[0],
         time_range=time_range,
         title="Background & Flat-Field Corrected Counts",
         cbar_title="Counts/s/$deg^2$",
-        norm="log",
-        vmin=1e-3,
-        vmax=1e0,
+        norm=norm_lexi,
+        vmin=v_min_lexi,
+        vmax=v_max_lexi,
     )
-    x_lim = (30 / max_flux, 110 / min_flux)
+    x_lim = (line_x_min, line_x_max)
     # Plot the line profiles on the bottom row
     _, data_df = plot_line_profile(
         data_df,
         axs[1, 0],
-        np.asarray(dat["lexi_image"][...])[0]
-        * np.asarray(dat["exposure_map"][...])[0]
-        * np.asarray(dat["pixel_area"][...])[0]
-        / avg_flux,
+        np.asarray(dat["lexi_image"][...])[0] * np.asarray(dat["exposure_map"][...])[0],
+        # / np.asarray(dat["exposure_map"][...])[0]
+        # / np.asarray(dat["pixel_area"][...])[0],
         AZcorn,
         ELcorn,
         title="Line Profile",
@@ -581,9 +602,9 @@ for i, f in enumerate(l2_files[:]):
         data_df,
         axs[1, 1],
         np.asarray(dat["lexi_image_background_corrected"][...])[0]
-        * np.asarray(dat["exposure_map"][...])[0]
-        * np.asarray(dat["pixel_area"][...])[0]
-        / avg_flux,
+        * np.asarray(dat["exposure_map"][...])[0],
+        # / np.asarray(dat["exposure_map"][...])[0]
+        # / np.asarray(dat["pixel_area"][...])[0],
         AZcorn,
         ELcorn,
         title="Line Profile",
@@ -596,9 +617,9 @@ for i, f in enumerate(l2_files[:]):
         data_df,
         axs[1, 2],
         np.asarray(dat["lexi_image_background_flatfield_corrected"][...])[0]
-        * np.asarray(dat["exposure_map"][...])[0]
-        * np.asarray(dat["pixel_area"][...])[0]
-        / avg_flux,
+        * np.asarray(dat["exposure_map"][...])[0],
+        # / np.asarray(dat["exposure_map"][...])[0]
+        # / np.asarray(dat["pixel_area"][...])[0],
         AZcorn,
         ELcorn,
         title="Line Profile",
@@ -631,10 +652,10 @@ for i, f in enumerate(l2_files[:]):
         ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
         ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
 
-    figure_path = Path("../figures/line_profiles/bg_corrected/from_l2/az_el/1min/flux_avg/")
+    figure_path = Path(f"../figures/line_profiles/bg_corrected/from_l2/{time_res}/az_el/")
     figure_path.mkdir(parents=True, exist_ok=True)
     fig.savefig(
-        figure_path / (Path(f).stem + "_exposure_accounted_az_el.png"),
+        figure_path / (Path(f).stem + f"_exposure_accounted_az_el_{time_res}.png"),
         dpi=200,
         bbox_inches="tight",
         pad_inches=0.1,
@@ -645,9 +666,9 @@ for i, f in enumerate(l2_files[:]):
 
 
 # Save the dataframe to a CSV file
-data_folder = Path("../data/line_profile_data/bg_corrected/from_l2/")
+data_folder = Path(f"../data/line_profile_data/bg_corrected/from_l2/{time_res}/")
 data_folder.mkdir(parents=True, exist_ok=True)
 data_df.to_csv(
-    data_folder / "line_profile_fit_parameters_bg_corrected_1min_flux_avg.csv",
+    data_folder / f"line_profile_fit_parameters_bg_corrected_{time_res}_flux_avg_.csv",
     index=False,
 )

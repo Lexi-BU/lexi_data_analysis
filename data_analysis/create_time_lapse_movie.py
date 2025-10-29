@@ -7,7 +7,7 @@ from moviepy import ImageSequenceClip
 from PIL import Image
 
 # Inputs
-image_folder = "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_pipeline/pipeline/figures/exposure_maps/bg_corrected/from_l2/new/az_el/"
+image_folder = "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/figures/line_profiles/bg_corrected/from_l2/az_el/"
 start_time = "2025-03-16-19-00-00"
 end_time = "2025-03-16-21-15-00"
 
@@ -30,6 +30,8 @@ temp_paths = []
 base_w = base_h = None
 
 for filename in sorted(os.listdir(image_folder)):
+    # Print the progress
+    print(f"Processing file number {len(images)+1}: of {len(os.listdir(image_folder))}", end="\r")
     if not filename.endswith(".png"):
         continue
     img_path = os.path.join(image_folder, filename)
@@ -50,7 +52,7 @@ clip = ImageSequenceClip(images, fps=frame_rate)
 # Output
 output_folder = Path("../movies/").expanduser().resolve()
 output_folder.mkdir(parents=True, exist_ok=True)
-stem = f"exposure_time_series_all_az_el_{start_time}_{end_time}_v4"
+stem = f"exposure_time_series_all_az_el_{start_time}_{end_time}_5min_res"
 
 if output_format.lower() == "mp4":
     out_path = output_folder / f"{stem}.mp4"
