@@ -490,18 +490,18 @@ min_flux = flux_df.loc[flux_df.index < wake_time, f"th{themis_spc}_peef_flux"].m
 
 
 # Example
-time_res = "105min"
+time_res = "1min"
 all_l2_files = sorted(
     glob.glob(f"/mnt/cephadrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf")
 )
 l2_files = keep_highest_versions(all_l2_files)
 
-norm_lexi = "log"
-v_min_lexi = 1e-1
-v_max_lexi = 1e2
+norm_lexi = "linear"
+v_min_lexi = 0
+v_max_lexi = 4e1
 
-line_x_min = 40
-line_x_max = 100
+line_x_min = 10
+line_x_max = 30
 
 for i, f in enumerate(l2_files[:]):
     dat = cdf(f)

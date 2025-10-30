@@ -6,6 +6,7 @@ from pathlib import Path
 import matplotlib as mpl
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 import numpy as np
 import pandas as pd
 from spacepy.pycdf import CDF as cdf
@@ -13,8 +14,8 @@ from spacepy.pycdf import CDF as cdf
 # --------------------------------------------
 # Config
 # --------------------------------------------
-plt.style.use("dark_background")
-mpl.rcParams.update({"font.size": 14})
+plt.style.use("default")
+mpl.rcParams.update({"font.size": 25})
 # Set the fonttype to 42 to avoid Type 3 fonts in the output PDF/PNGs
 mpl.rcParams["pdf.fonttype"] = 42
 # Set the the font to be arial-like for better readability
@@ -158,30 +159,49 @@ def load_profile_for_time(l2_file):
         dat.close()
 
 
-def plot_one_line_profile(ax, el_centers, profile, when_utc=None):
-    # Scatter + fit, then strip visuals
-    ax.scatter(profile, el_centers, s=10, marker=".", color="magenta")
+def plot_one_line_profile(ax, el_centers, profile, when_utc=None, is_first=False, color="magenta"):
+    ax.scatter(profile, el_centers, s=4, marker="d", color=color, alpha=1)
     valid = np.isfinite(profile) & np.isfinite(el_centers)
     if valid.sum() >= 2:
         coeffs = np.polyfit(el_centers[valid], profile[valid], deg=1)
         poly = np.poly1d(coeffs)
         x_fit = np.linspace(np.nanmin(el_centers[valid]), np.nanmax(el_centers[valid]), 100)
         y_fit = poly(x_fit)
-        ax.plot(y_fit, x_fit, color="cyan", linestyle="--", linewidth=1.5)
+        ax.plot(y_fit, x_fit, color="k", linestyle="--", linewidth=1.5)
 
-    # Requested limits and no visuals
+    # Requested limits
     ax.set_xlim(LINE_X_MIN, LINE_X_MAX)
     ax.set_ylim(EL_Y_LIM)
-    ax.set_xlabel("")
+    ax.set_xlabel("")  # no axis label
+    ax.tick_params(axis="x", which="both", bottom=True, labelbottom=True)
+    ax.spines["bottom"].set_visible(True)
+
     ax.set_ylabel("")
     ax.set_title("")
-    ax.set_xticks([])
-    ax.set_yticks([])
-    for spine in ax.spines.values():
-        spine.set_visible(False)
 
-    # Set the time as the title (for debugging)
-    ax.set_title(pd.Timestamp(when_utc).strftime("%H:%M"))
+    # Add horizontal gridlines
+    ax.grid(axis="y", alpha=0.5, linestyle="-", linewidth=1)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["bottom"].set_visible(True)
+    ax.set_axisbelow(True)
+
+    # --- always show bottom axis and labels ---
+    ax.tick_params(axis="x", which="both", bottom=True, labelbottom=True)
+
+    if is_first:
+        ax.set_ylabel("Elevation [deg]")
+        ax.set_yticks(np.arange(EL_Y_LIM[0], EL_Y_LIM[1] + 1, 2.0))
+        ax.spines["left"].set_visible(True)
+        # Set the x-axis label only for the first plot
+        ax.set_xlabel(r"Counts [s$^{-1}$ arcmin$^{-2}$]", labelpad=-60)
+    else:
+        ax.set_yticks([])
+        ax.spines["left"].set_visible(False)
+
+    # Time as title
+    if when_utc is not None:
+        ax.set_title(pd.Timestamp(when_utc).strftime("%H:%M"))
 
 
 # --------------------------------------------
@@ -202,6 +222,9 @@ if "background_flatfield_corrected_slope" not in df.columns:
 # Build the figure: top = profiles, bottom = slope vs time
 # --------------------------------------------
 n_top = len(times_to_plot)
+# Define 6 specific colors for the time points
+colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]
+
 fig = plt.figure(figsize=(4.0 * n_top, 10), constrained_layout=True)
 gs = fig.add_gridspec(nrows=2, ncols=1, height_ratios=[2.0, 1.2])
 gs_top = gs[0].subgridspec(1, n_top, wspace=0.05)  # tight spacing since axes are invisible
@@ -216,23 +239,45 @@ for i, tsel in enumerate(times_to_plot):
     fp, t0, t1 = find_file_covering_time(l2_files, tsel)
     if fp is not None:
         elc, prof = load_profile_for_time(fp)
-        plot_one_line_profile(ax_top[i], elc, prof, when_utc=tsel)
+        plot_one_line_profile(
+            ax_top[i], elc, prof, when_utc=tsel, is_first=(i == 0), color=colors[i]
+        )
     else:
         ax_top[i].set_xlim(LINE_X_MIN, LINE_X_MAX)
         ax_top[i].set_ylim(EL_Y_LIM)
-        if i == 0:
-            # Display the y-axis ticks only on the first subplot
-            ax_top[i].set_ylabel("Elevation [deg]")
-            ax_top[i].set_yticks(np.arange(EL_Y_LIM[0], EL_Y_LIM[1] + 1, 2.0))
-        else:
-            ax_top[i].set_xticks([])
-            ax_top[i].set_yticks([])
-            for spine in ax_top[i].spines.values():
-                spine.set_visible(False)
+        ax_top[i].grid(axis="y", alpha=0.5, linestyle="-", linewidth=0.5)
+        ax_top[i].spines["top"].set_visible(False)
+        ax_top[i].spines["right"].set_visible(False)
+        ax_top[i].spines["bottom"].set_visible(True)
+
+        # show x-axis ticks and labels
+        ax_top[i].tick_params(axis="x", which="both", bottom=True, labelbottom=True)
+
+for i, ax in enumerate(ax_top):
+    ax.set_ylim(EL_Y_LIM)
+    ax.yaxis.set_major_locator(mticker.MultipleLocator(2.0))  # grid every 2 deg
+    ax.set_axisbelow(True)  # grid behind data
+    ax.grid(axis="y", which="major", alpha=1, linestyle="-", linewidth=0.8, zorder=0)
+
+    if i == 0:
+        ax.set_ylabel("Elevation [deg]")
+    else:
+        # Hide labels, not the ticks themselves
+        ax.tick_params(left=False, labelleft=False, bottom=False, labelbottom=False)
+        # (optionally still hide spines)
+        ax.spines["left"].set_visible(False)
+        ax.spines["bottom"].set_visible(False)
+
+    # Ensure all subplots have horizontal gridlines
+    # for ax in ax_top:
+    # ax.grid(axis="y", alpha=1, linestyle="-", linewidth=3, color="lightgray", zorder=10)
 
 # Bottom row: slope vs time (NO title); remove top/right spines
 ax_bottom.plot(df.index, df["background_flatfield_corrected_slope"], ls="--", lw=1.5, marker="o")
 ax_bottom.set_xlabel("Time [UTC]")
+# Format x-axis tick labels to only show hours and minutes
+ax_bottom.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
+ax_bottom.xaxis.set_major_locator(mdates.AutoDateLocator())
 ax_bottom.set_ylabel("Slope")
 ax_bottom.set_title("")
 
@@ -245,12 +290,19 @@ ax_bottom.grid(alpha=0.2)
 
 # ----- Vertical dashed lines + labels at selected times -----
 ymin, ymax = ax_bottom.get_ylim()
-for tsel in times_to_plot:
-    # draw a vertical dashed line
-    ax_bottom.axvline(tsel, linestyle="--", linewidth=1.2, alpha=0.8, zorder=2)
+for idx, tsel in enumerate(times_to_plot):
+    # draw a vertical dashed line with matching color
+    # Get the delta time from time_res
+    delta_time = pd.to_timedelta(time_res) / 2
+    ax_bottom.axvline(
+        tsel + delta_time, linestyle="--", linewidth=1.2, alpha=0.8, zorder=2, color=colors[idx]
+    )
+    ax_bottom.axvspan(
+        tsel + delta_time / 2, tsel + 3 * delta_time / 2, color=colors[idx], alpha=0.1, zorder=1
+    )
 
     # label right beside the line near the top of the axes
-    label = pd.Timestamp(tsel).strftime("%H:%M UTC")
+    label = pd.Timestamp(tsel).strftime("%H:%M")
     # Place slightly to the right of the line with an offset, anchored at the top
     ax_bottom.annotate(
         label,
@@ -260,14 +312,40 @@ for tsel in times_to_plot:
         textcoords="offset points",
         ha="left",
         va="top",
-        fontsize=11,
-        bbox=dict(facecolor="black", alpha=0.3, pad=1.5, edgecolor="none"),
+        fontsize=0.9 * mpl.rcParams["font.size"],
+        bbox=dict(facecolor="white", alpha=0.3, pad=1.5, edgecolor="None"),
     )
 
+sunset_time = datetime.datetime(2025, 3, 16, 19, 29, 0, tzinfo=datetime.timezone.utc)
+ax_bottom.axvline(sunset_time, color="red", linestyle="--", linewidth=1.5)
+ax_bottom.axvspan(
+    sunset_time - pd.Timedelta(minutes=29),
+    sunset_time,
+    color="k",
+    alpha=0.1,
+    zorder=1,
+)
+ax_bottom.annotate(
+    "Sunset Ends",
+    xy=(sunset_time, 1.1 * (ymin + ymax) / 2),
+    xycoords=("data", "data"),
+    xytext=(5, -5),  # small offset in points (right, down)
+    textcoords="offset points",
+    ha="left",
+    va="top",
+    fontsize=0.9 * mpl.rcParams["font.size"],
+    color="red",
+    bbox=dict(facecolor="white", alpha=0.3, pad=1.5, edgecolor="None"),
+)
+ax_bottom.set_xlim(
+    df.index.min() - pd.Timedelta(minutes=1.5),
+    df.index.max() + pd.Timedelta(minutes=1.5),
+)
 # Save
 outdir = Path("../figures/slope_time_series/")
 outdir.mkdir(parents=True, exist_ok=True)
-outfile = outdir / f"slope_v_time_{time_res}_profiles_plus_series_vlines.png"
+figure_format = "pdf"  # "pdf" or "png"
+outfile = outdir / f"slope_v_time_{time_res}_profiles_plus_series_vlines_v2.{figure_format}"
 fig.savefig(outfile, dpi=300, bbox_inches="tight", pad_inches=0.1)
 print(f"Saved figure: {outfile}")
 # plt.show()
