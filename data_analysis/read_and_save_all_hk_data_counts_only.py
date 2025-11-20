@@ -3,6 +3,7 @@ import glob
 import importlib
 from pathlib import Path
 
+import matplotlib as mpl
 import matplotlib.dates as mdates
 
 # import lexi_data_analysis_functions as lexi_functions
@@ -117,106 +118,107 @@ for plot_start_time, plot_end_time in zip(plot_start_time_list, plot_end_time_li
 
     keys_to_plot = ["all_counts", "dec_lexi", "ra_lexi"]
 
-    # Set the font size
-    plt.rcParams.update({"font.size": 12})
-    # Use the black background style
-    plt.style.use("dark_background")
+    plt.style.use("default")
+    # Set the font to Arial
+    mpl.rcParams["font.family"] = "Arial"
+    # Set latex style for plots
+    mpl.rcParams["text.usetex"] = True
     # Plot the data
     fig, ax = plt.subplots(1, 1, figsize=(10, 6), sharex=True)
     plt.subplots_adjust(hspace=0.05, wspace=0.0)
 
     # Plot the counts data on the first axis
-    ax.scatter(
-        selected_merged_df.index,
-        selected_merged_df["all_counts"],
-        label="All Counts",
-        color="w",
-        s=1,
-        alpha=1,
-    )
-    ax.scatter(
-        selected_merged_df.index,
-        selected_merged_df["DeltaDroppedCount"],
-        label="DeltaDroppedCount",
-        color="b",
-        s=1,
-        alpha=0.25,
-    )
-    ax.scatter(
-        selected_merged_df.index,
-        selected_merged_df["DeltaLostEvntCount"],
-        label="DeltaLostEvntCount",
-        color="g",
-        s=1,
-        alpha=0.25,
-    )
-    ax.set_ylabel("Counts [#]")
-    # ax.set_yscale("log")
-    twin_ax_1 = ax.twinx()
-    twin_ax_1.scatter(
-        selected_merged_df.index,
-        selected_merged_df["DeltaEvntCount"],
-        label="DeltaEvntCount",
-        color="r",
-        s=1,
-        alpha=0.5,
-    )
-    # twin_ax_1.set_yscale("log")
-    twin_ax_1.set_ylabel("Delta Event Count", color="r")
+    # ax.scatter(
+    #     selected_merged_df.index,
+    #     selected_merged_df["all_counts"],
+    #     label="All Counts",
+    #     color="w",
+    #     s=1,
+    #     alpha=1,
+    # )
+    # ax.scatter(
+    #     selected_merged_df.index,
+    #     selected_merged_df["DeltaDroppedCount"],
+    #     label="DeltaDroppedCount",
+    #     color="b",
+    #     s=1,
+    #     alpha=0.25,
+    # )
+    # ax.scatter(
+    #     selected_merged_df.index,
+    #     selected_merged_df["DeltaLostEvntCount"],
+    #     label="DeltaLostEvntCount",
+    #     color="g",
+    #     s=1,
+    #     alpha=0.25,
+    # )
+    ax.set_ylabel("Counts/second", color="k")
+    # # ax.set_yscale("log")
+    # twin_ax_1 = ax.twinx()
+    # twin_ax_1.scatter(
+    #     selected_merged_df.index,
+    #     selected_merged_df["DeltaEvntCount"],
+    #     label="DeltaEvntCount",
+    #     color="r",
+    #     s=1,
+    #     alpha=0.5,
+    # )
+    # # twin_ax_1.set_yscale("log")
+    # twin_ax_1.set_ylabel("Delta Event Count", color="r")
     # Set the legend
     # ax.legend(loc="upper left")
-    ax.text(
-        0.05,
-        1.01,
-        "All Counts",
-        horizontalalignment="left",
-        verticalalignment="bottom",
-        transform=ax.transAxes,
-        color="w",
-    )
-    ax.text(
-        0.18,
-        1.01,
-        "Dropped Counts",
-        horizontalalignment="left",
-        verticalalignment="bottom",
-        transform=ax.transAxes,
-        color="b",
-    )
-    ax.text(
-        0.40,
-        1.01,
-        "Lost Counts",
-        horizontalalignment="left",
-        verticalalignment="bottom",
-        transform=ax.transAxes,
-        color="g",
-    )
-    ax.text(
-        0.75,
-        1.01,
-        "Event Counts (Sci)",
-        horizontalalignment="right",
-        verticalalignment="bottom",
-        transform=ax.transAxes,
-        color="y",
-    )
-    ax.text(
-        0.98,
-        1.01,
-        "Event Counts (HK)",
-        horizontalalignment="right",
-        verticalalignment="bottom",
-        transform=ax.transAxes,
-        color="r",
-    )
-    ax.grid(color="c", linestyle="--", linewidth=0.5, alpha=0.5)
+    # ax.text(
+    #     0.05,
+    #     1.01,
+    #     "All Counts",
+    #     horizontalalignment="left",
+    #     verticalalignment="bottom",
+    #     transform=ax.transAxes,
+    #     color="w",
+    # )
+    # ax.text(
+    #     0.18,
+    #     1.01,
+    #     "Dropped Counts",
+    #     horizontalalignment="left",
+    #     verticalalignment="bottom",
+    #     transform=ax.transAxes,
+    #     color="b",
+    # )
+    # ax.text(
+    #     0.40,
+    #     1.01,
+    #     "Lost Counts",
+    #     horizontalalignment="left",
+    #     verticalalignment="bottom",
+    #     transform=ax.transAxes,
+    #     color="g",
+    # )
+    # ax.text(
+    #     0.75,
+    #     1.01,
+    #     "Event Counts (Sci)",
+    #     horizontalalignment="right",
+    #     verticalalignment="bottom",
+    #     transform=ax.transAxes,
+    #     color="y",
+    # )
+    # ax.text(
+    #     0.98,
+    #     1.01,
+    #     "Event Counts (HK)",
+    #     horizontalalignment="right",
+    #     verticalalignment="bottom",
+    #     transform=ax.transAxes,
+    #     color="r",
+    # )
+    ax.grid(color="k", linestyle="--", linewidth=0.5, alpha=0.5)
 
     # Set the spine color to match the line color
     # twin_ax.spines["left"].set_color("w")
-    twin_ax_1.spines["right"].set_color("r")
+    # twin_ax_1.spines["right"].set_color("r")
     # ax.tick_params(axis="y", colors="w")
-    twin_ax_1.tick_params(axis="y", colors="r")
+    # twin_ax_1.tick_params(axis="y", colors="r")
     # twin_ax_1.set_ylim(100, 3200)
 
     # Set the x-axis label
@@ -235,7 +237,12 @@ for plot_start_time, plot_end_time in zip(plot_start_time_list, plot_end_time_li
     # Set maximum number of x-ticks on x-axis to 5
     # ax.xaxis.set_major_locator(plt.MaxNLocator(5))
 
-    min_time_str = selected_merged_df.index.min().strftime("%Y-%m-%dT%H:%M:%SZ").replace("T", " ").replace("Z", "")
+    min_time_str = (
+        selected_merged_df.index.min()
+        .strftime("%Y-%m-%dT%H:%M:%SZ")
+        .replace("T", " ")
+        .replace("Z", "")
+    )
     max_time_str = (
         selected_merged_df.index.max()
         .strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -246,7 +253,7 @@ for plot_start_time, plot_end_time in zip(plot_start_time_list, plot_end_time_li
     # Put all ticks inside the plot
     for axis in [ax.xaxis, ax.yaxis]:
         axis.set_tick_params(which="both", direction="in", color="w")
-    twin_ax_1.tick_params(which="both", direction="in", color="r")
+    # twin_ax_1.tick_params(which="both", direction="in", color="r")
 
     # Define sunset times
     # NOTE: These sunset start and end times are from FireFly. It was computed using a spherical
@@ -323,7 +330,7 @@ for plot_start_time, plot_end_time in zip(plot_start_time_list, plot_end_time_li
     df_counts = pd.read_csv(counts_per_second_file, index_col=0, parse_dates=True)
     df_counts = df_counts.loc[plot_start_time:plot_end_time]
     # Add the df_counts data to the plot (left axis)
-    twin_ax_1.scatter(
+    ax.scatter(
         df_counts.index,
         df_counts["0"],
         label="Counts per Second",
@@ -334,10 +341,10 @@ for plot_start_time, plot_end_time in zip(plot_start_time_list, plot_end_time_li
     )
 
     # Set the title
-    fig.suptitle(
-        f"LEXI Data from {min_time_str} to {max_time_str}\n The sunset period is from {sunset_start_time.strftime('%H:%M')} to {sunset_end_time.strftime('%H:%M')}",
-        fontsize=14,
-    )
+    # fig.suptitle(
+    #     f"LEXI Data from {min_time_str} to {max_time_str}\n The sunset period is from {sunset_start_time.strftime('%H:%M')} to {sunset_end_time.strftime('%H:%M')}",
+    #     fontsize=14,
+    # )
     # ax.set_ylim(0, 1500)
     # # Add a vertical line at 19:45
     # vertical_line_time = datetime.datetime.strptime("2025-03-16T19:45:00Z", "%Y-%m-%dT%H:%M:%SZ")
@@ -359,7 +366,7 @@ for plot_start_time, plot_end_time in zip(plot_start_time_list, plot_end_time_li
     # )
     # Save the figure
     fig.savefig(
-        f"../figures/lexi_data_{plot_start_time}_to_{plot_end_time}_all_counts.png",
+        f"../figures/lexi_data_{plot_start_time}_to_{plot_end_time}_all_counts_selected.png",
         dpi=300,
         bbox_inches="tight",
     )
