@@ -11,7 +11,7 @@ import pandas as pd
 import seaborn as sns
 from matplotlib.colors import LogNorm
 from matplotlib.gridspec import GridSpec
-from matplotlib.ticker import ScalarFormatter
+from matplotlib.ticker import FuncFormatter, ScalarFormatter
 from spacepy.pycdf import CDF as cdf
 
 # --------------------------------------------
@@ -169,6 +169,7 @@ def plot_on_az_el(
         data,
         shading="auto",
         cmap="plasma",
+        edgecolor="face",
         norm=norm,
     )
     ax.set_xlabel("Az [deg]")
@@ -179,30 +180,40 @@ def plot_on_az_el(
     ax.set_aspect("equal", adjustable="box")
 
     # ---- Custom colorbar tick formatting ----
-    cbar = plt.colorbar(pm, ax=ax, orientation="vertical", fraction=0.046, pad=0.00)
+    cbar = plt.colorbar(pm, ax=ax, orientation="vertical", fraction=0.046, pad=-0.075)
 
-    # Use scalar formatting but suppress scientific notation on individual ticks
-    formatter = ScalarFormatter(useMathText=True)
-    formatter.set_powerlimits((0, 0))  # disable auto sci-notation on ticks
-    formatter.set_useOffset(False)
-    cbar.ax.yaxis.set_major_formatter(formatter)
-    cbar.ax.yaxis.set_minor_formatter(plt.NullFormatter())
+    # Force scientific notation with shared exponent
+    # Get the colorbar limits
+    if vmin is None or vmax is None:
+        vmin, vmax = pm.get_clim()
+    else:
+        vmin, vmax = vmin, vmax
 
-    # Draw the colorbar once so ticks and offset exist
-    cbar.update_ticks()
+    # Calculate the order of magnitude
+    magnitude = int(np.floor(np.log10(max(abs(vmin), abs(vmax)))))
+    scale_factor = 10**magnitude
 
-    # Extract the offset text (e.g. "×10⁻³") and reposition it at the top
-    offset_text = cbar.ax.yaxis.get_offset_text()
-    offset_text.set(size=0.8 * mpl.rcParams["font.size"])
-    offset_text.set_verticalalignment("bottom")
-    offset_text.set_horizontalalignment("center")
-    offset_text.set_position((0.5, 1.03))  # centered at top
-    offset_text.set_transform(cbar.ax.transAxes)
+    # Create custom tick formatter that shows values divided by scale factor
+    def format_func(x, pos):
+        return f"{x / scale_factor:.1f}"
 
-    # Optional: hide any remaining offset on side ticks
-    cbar.ax.yaxis.offsetText.set_visible(True)
+    cbar.ax.yaxis.set_major_formatter(FuncFormatter(format_func))
 
+    # Add the offset text at the top
+    offset_label = rf"$\times 10^{{{magnitude}}}$"
+    # cbar.ax.text(
+    #     0.5,
+    #     1.03,
+    #     offset_label,
+    #     transform=cbar.ax.transAxes,
+    #     ha="center",
+    #     va="bottom",
+    #     fontsize=0.8 * mpl.rcParams["font.size"],
+    # )
+
+    # Add offset_label to cbar title if provided
     if cbar_title:
+        cbar_title = f"{cbar_title} [{offset_label}]"
         cbar.ax.text(
             0.5,
             0.5,
@@ -212,9 +223,9 @@ def plot_on_az_el(
             va="center",
             rotation=90,
             color="white",
-            fontsize=0.8 * mpl.rcParams["font.size"],
+            fontsize=0.7 * mpl.rcParams["font.size"],
             fontweight="bold",
-            bbox=dict(facecolor="black", alpha=0.25, pad=2, edgecolor="none"),
+            # bbox=dict(facecolor="black", alpha=0.25, pad=2, edgecolor="none"),
         )
 
     # Set the x and y-axis limits
@@ -414,8 +425,6 @@ def plot_line_profile(
     )
     ax.scatter(profile, el_centers, color="magenta", s=10, marker=".")
     ax.set_title(title)
-    ax.set_xlabel(xlabel if xlabel else "Counts")
-    ax.set_ylabel(ylabel if ylabel else "Elevation [deg]")
     # Make vertical orange line at the minimum and maximum profile values
     ax.axvline(x=np.nanmin(profile), color="orange", linestyle="--", linewidth=1.5)
     ax.axvline(x=np.nanmax(profile), color="orange", linestyle="--", linewidth=1.5)
@@ -433,6 +442,21 @@ def plot_line_profile(
 
     # Set the tick label font size
     ax.tick_params(axis="both", which="both", labelsize=1.8 * mpl.rcParams["font.size"])
+
+    # Apply same tick formatting style as colorbar (scientific notation with shared exponent)
+    x_min, x_max = ax.get_xlim()
+    magnitude = int(np.floor(np.log10(max(abs(x_min), abs(x_max)))))
+    scale_factor = 10**magnitude
+
+    def format_func(x, pos):
+        return f"{x / scale_factor:.1f}"
+
+    ax.xaxis.set_major_formatter(FuncFormatter(format_func))
+
+    xlabel = xlabel + rf"[$\times 10^{{{magnitude}}}$]"
+    ax.set_xlabel(xlabel, fontsize=1.2 * mpl.rcParams["font.size"])
+
+    ax.set_ylabel(ylabel if ylabel else "Elevation [deg]", fontsize=1.2 * mpl.rcParams["font.size"])
 
     # Update the data_df with new columns (if the columns don't already exist)
     if key:
@@ -614,8 +638,6 @@ def plot_integrated_map_with_marginals_seaborn(
 
     # ---- construct figure with exact size ----
     fig = plt.figure(figsize=figsize)
-    # 2x2 grid: [ (top, joint top), (joint-left, joint), (right marginals) ]
-    # Use ratios to size joint larger than marginals, but the total size is exactly figsize.
     gs = GridSpec(
         nrows=2,
         ncols=2,
@@ -626,13 +648,18 @@ def plot_integrated_map_with_marginals_seaborn(
         right=0.95,
         bottom=0.08,
         top=0.92,
-        hspace=0.1,
-        wspace=0.1,
+        hspace=0.01,
+        wspace=-0.08,  # Reduced to tighten space between ax_right and colorbar
     )
 
     ax_joint = fig.add_subplot(gs[1, 0])
     ax_top = fig.add_subplot(gs[0, 0], sharex=ax_joint)
     ax_right = fig.add_subplot(gs[1, 1], sharey=ax_joint)
+
+    # ---- Force same width between ax_top and ax_joint ----
+    pos_joint = ax_joint.get_position()
+    pos_top = ax_top.get_position()
+    ax_top.set_position([pos_joint.x0, pos_top.y0, pos_joint.width * 0.85, pos_top.height])
 
     # ---- center image with true extents ----
     az_min, az_max = AZcorn[0, 0], AZcorn[0, -1]
@@ -648,14 +675,63 @@ def plot_integrated_map_with_marginals_seaborn(
         norm=norm,
         interpolation="nearest",
     )
-    cbar = fig.colorbar(im, ax=ax_joint, pad=0.02)
-    # Set the cbar axes limits to match the image
+
+    # ---- Colorbar ----
+    cbar = fig.colorbar(im, ax=ax_joint, pad=0.0)
     if cbar_lims != (None, None):
         im.set_clim(vmin=cbar_lims[0], vmax=cbar_lims[1])
-    cbar.set_label(cbar_label)
 
-    ax_joint.set_xlabel("Azimuth [deg]")
-    ax_joint.set_ylabel("Elevation [deg]")
+    # Force scientific notation with shared exponent
+    # Get the colorbar limits
+    vmin, vmax = cbar_lims
+
+    # Calculate the order of magnitude
+    magnitude = int(np.floor(np.log10(max(abs(vmin), abs(vmax)))))
+    scale_factor = 10**magnitude
+
+    # Create custom tick formatter that shows values divided by scale factor
+    def format_func(x, pos):
+        return f"{x / scale_factor:.1f}"
+
+    cbar.ax.yaxis.set_major_formatter(FuncFormatter(format_func))
+    # Set the font size of colorbar tick labels
+    cbar.ax.tick_params(labelsize=1.5 * mpl.rcParams["font.size"])
+
+    # Add the offset text at the top
+    offset_label = rf"$\times 10^{{{magnitude}}}$"
+    # cbar.ax.text(
+    #     0.5,
+    #     1.03,
+    #     offset_label,
+    #     transform=cbar.ax.transAxes,
+    #     ha="center",
+    #     va="bottom",
+    #     fontsize=0.8 * mpl.rcParams["font.size"],
+    # )
+
+    # Add offset_label to cbar title if provided
+    if cbar_label:
+        cbar_label = f"{cbar_label} [{offset_label}]"
+        cbar.ax.text(
+            0.5,
+            0.5,
+            cbar_label,
+            transform=cbar.ax.transAxes,
+            ha="center",
+            va="center",
+            rotation=90,
+            color="white",
+            fontsize=1.2 * mpl.rcParams["font.size"],
+            fontweight="bold",
+            # bbox=dict(facecolor="black", alpha=0.25, pad=2, edgecolor="none"),
+        )
+    # Ensure the (now repositioned) offset text is visible
+    cbar.ax.yaxis.offsetText.set_visible(True)
+    # ---------------------------------
+
+    ax_joint.set_xlabel("Azimuth [deg]", fontsize=1.8 * mpl.rcParams["font.size"])
+    ax_joint.set_ylabel("Elevation [deg]", fontsize=1.8 * mpl.rcParams["font.size"])
+
     if title:
         ax_joint.set_title(title, pad=8)
 
@@ -663,24 +739,81 @@ def plot_integrated_map_with_marginals_seaborn(
     # top: az_marg vs az_centers
     sns.scatterplot(x=az_centers, y=az_marg, s=scatter_size, ax=ax_top)
 
-    ax_top.set_ylabel(ylab_top)
     ax_top.grid(True, alpha=0.3)
     # Set the y-axis limits to match the joint plot
     ax_top.set_ylim(0.008, 0.02)
+    # Explicitly set x-axis limits to match ax_joint
+    ax_top.set_xlim(az_min, az_max)
     plt.setp(ax_top.get_xticklabels(), visible=False)  # sharex with joint; hide x labels on top
 
     # right: el_marg vs el_centers (horizontal scatter)
     sns.scatterplot(y=el_centers, x=el_marg, s=scatter_size, ax=ax_right)
-    ax_right.set_xlabel(xlab_right)
     ax_right.grid(True, alpha=0.3)
     # Set the x-axis limits to match the joint plot
     ax_right.set_xlim(0.005, 0.017)
-    plt.setp(ax_right.get_yticklabels(), visible=False)  # sharey with joint; hide y labels on right
+    # plt.setp(ax_right.get_yticklabels(), visible=False)  # sharey with joint; hide y labels on right
 
     # tidy ticks
-    ax_top.tick_params(labelsize=0.8 * mpl.rcParams["font.size"])
-    ax_right.tick_params(labelsize=0.8 * mpl.rcParams["font.size"])
-    ax_joint.tick_params(labelsize=0.8 * mpl.rcParams["font.size"])
+    # ax_top.tick_params(labelsize=0.9 * mpl.rcParams["font.size"])
+    # ax_right.tick_params(labelsize=0.9 * mpl.rcParams["font.size"])
+    ax_joint.tick_params(labelsize=1.8 * mpl.rcParams["font.size"])
+
+    # Hide all the spines of ax_top and ax_right
+    for spine in ax_top.spines.values():
+        spine.set_visible(False)
+    for spine in ax_right.spines.values():
+        spine.set_visible(False)
+    # Hide the ticks and labels for top and right axes
+    ax_top.tick_params(
+        axis="both",
+        which="both",
+        bottom=False,
+        top=False,
+        left=False,
+        right=False,
+        labelbottom=False,
+        labelleft=False,
+        labeltop=False,
+        labelright=False,
+    )
+    ax_right.tick_params(
+        axis="both",
+        which="both",
+        bottom=False,
+        top=False,
+        left=False,
+        right=False,
+        labelbottom=False,
+        labelleft=False,
+        labeltop=False,
+        labelright=False,
+    )
+
+    # Apply same tick formatting style as colorbar (scientific notation with shared exponent)
+    # For ax_top (y-axis)
+    # y_min_top, y_max_top = ax_top.get_ylim()
+    # magnitude_top = int(np.floor(np.log10(max(abs(y_min_top), abs(y_max_top)))))
+    # scale_factor_top = 10**magnitude_top
+
+    # def format_func_top(x, pos):
+    #     return f"{x / scale_factor_top:.1f}"
+
+    # ax_top.yaxis.set_major_formatter(FuncFormatter(format_func_top))
+    # ylab_top = ylab_top + rf"[$\times 10^{{{magnitude_top}}}$]"
+    # ax_top.set_ylabel(ylab_top, fontsize=0.7 * mpl.rcParams["font.size"])
+
+    # # For ax_right (x-axis)
+    # x_min_right, x_max_right = ax_right.get_xlim()
+    # magnitude_right = int(np.floor(np.log10(max(abs(x_min_right), abs(x_max_right)))))
+    # scale_factor_right = 10**magnitude_right
+
+    # def format_func_right(x, pos):
+    #     return f"{x / scale_factor_right:.1f}"
+
+    # ax_right.xaxis.set_major_formatter(FuncFormatter(format_func_right))
+
+    # xlab_right = xlab_right + rf"[$\times 10^{{{magnitude_right}}}$]"
+    # ax_right.set_xlabel(xlab_right, fontsize=0.7 * mpl.rcParams["font.size"])
 
     return fig, (ax_joint, ax_top, ax_right)
 
@@ -736,6 +869,7 @@ integration = "29min"  # e.g., "5min", "10min", "30min", "1H"
 span_start = "2025-03-16 19:00:00+00:00"
 span_end = "2025-03-16 19:29:00+00:00"
 
+fig_format = "pdf"  # "png" or "pdf"
 
 norm_lexi = "linear"
 v_min_lexi = 0.02
@@ -899,20 +1033,20 @@ for k in range(len(edges) - 1):
         ax.contour(AZcorn[:-1, :-1], ELcorn[:-1, :-1], az_c, colors="c", linewidths=0.6, alpha=0.5)
         ax.contour(AZcorn[:-1, :-1], ELcorn[:-1, :-1], el_c, colors="k", linewidths=0.6, alpha=0.5)
         ax.set_aspect("equal")
-        ax.tick_params(axis="both", which="major", labelsize=0.8 * mpl.rcParams["font.size"])
-        ax.tick_params(axis="both", which="minor", labelsize=0.8 * mpl.rcParams["font.size"])
-        ax.xaxis.get_offset_text().set(size=0.8 * mpl.rcParams["font.size"])
-        ax.yaxis.get_offset_text().set(size=0.8 * mpl.rcParams["font.size"])
+        ax.tick_params(axis="both", which="major", labelsize=1 * mpl.rcParams["font.size"])
+        ax.tick_params(axis="both", which="minor", labelsize=1 * mpl.rcParams["font.size"])
+        ax.xaxis.get_offset_text().set(size=1 * mpl.rcParams["font.size"])
+        ax.yaxis.get_offset_text().set(size=1 * mpl.rcParams["font.size"])
         ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
         ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
 
     for ax in axs.flatten()[3:]:
-        ax.tick_params(axis="both", which="major", labelsize=0.8 * mpl.rcParams["font.size"])
-        ax.tick_params(axis="both", which="minor", labelsize=0.8 * mpl.rcParams["font.size"])
-        ax.xaxis.get_offset_text().set(size=0.8 * mpl.rcParams["font.size"])
-        ax.yaxis.get_offset_text().set(size=0.8 * mpl.rcParams["font.size"])
-        ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
-        ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+        ax.tick_params(axis="both", which="major", labelsize=1 * mpl.rcParams["font.size"])
+        ax.tick_params(axis="both", which="minor", labelsize=1 * mpl.rcParams["font.size"])
+        ax.xaxis.get_offset_text().set(size=1 * mpl.rcParams["font.size"])
+        ax.yaxis.get_offset_text().set(size=1 * mpl.rcParams["font.size"])
+        # ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+        # ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
 
     # Save figure per integrated window
     outdir = Path(f"../figures/line_profiles/bg_corrected/from_l2/az_el_integrated_{integration}/")
@@ -920,7 +1054,13 @@ for k in range(len(edges) - 1):
     fig_name = (
         f"lexi_l2_integrated_{win_start.strftime('%Y%m%d_%H%M%S')}_{win_end.strftime('%H%M%S')}"
     )
-    fig.savefig(outdir / f"{fig_name}.png", dpi=200, bbox_inches="tight", pad_inches=0.1)
+    fig.savefig(
+        outdir / f"{fig_name}.{fig_format}",
+        dpi=200,
+        bbox_inches="tight",
+        pad_inches=0.1,
+        format=fig_format,
+    )
     plt.close(fig)
 
     sums = {"sum_raw": sum_raw, "sum_bg": sum_bg, "sum_bgff": sum_bgff}
@@ -974,7 +1114,7 @@ for k in range(len(edges) - 1):
         # g.fig.savefig(outdir / fname, dpi=200, bbox_inches="tight")
         # plt.close(g.fig)
 
-        figsize_exact = (8, 7)
+        figsize_exact = (10, 9)
 
         # title = f"{hist_choice} | {win_start:%Y-%m-%d %H:%M:%S}-{win_end:%H:%M:%S} UTC"
         fig, _ = plot_integrated_map_with_marginals_seaborn(
@@ -986,8 +1126,8 @@ for k in range(len(edges) - 1):
             cmap="plasma",
             log_color=False,
             cbar_label="Counts/s",
-            joint_ratio=6,
-            scatter_size=12,
+            joint_ratio=7,
+            scatter_size=10,
             normalize_marginals=True,  # <-- your #1
             cbar_lims=(v_min_lexi, v_max_lexi),
         )
@@ -996,6 +1136,6 @@ for k in range(len(edges) - 1):
             f"../figures/line_profiles/bg_corrected/from_l2/az_el_integrated_{integration}/histmaps_with_marginals/"
         )
         outdir.mkdir(parents=True, exist_ok=True)
-        fname = f"{hist_choice}_normalized_{win_start.strftime('%Y%m%d_%H%M%S')}_{win_end.strftime('%H%M%S')}.png"
+        fname = f"{hist_choice}_normalized_{win_start.strftime('%Y%m%d_%H%M%S')}_{win_end.strftime('%H%M%S')}.{fig_format}"
         fig.savefig(outdir / fname, dpi=200, bbox_inches="tight")
         plt.close(fig)
