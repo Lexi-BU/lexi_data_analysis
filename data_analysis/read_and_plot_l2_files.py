@@ -18,7 +18,7 @@ def keep_highest_versions(paths):
     for p in map(Path, paths):
         stem = p.stem
         try:
-            base, vstr = stem.rsplit("_V", 1)
+            base, vstr = stem.rsplit("_v", 1)
         except ValueError:
             # If no _V part, treat version as 0
             base, vstr = stem, "0"
@@ -353,6 +353,11 @@ def plot_line_profile(
 
     # Get the best fit line (ignoring NaNs)
     valid = ~np.isnan(el_centers) & ~np.isnan(profile)
+    # Do not use first 3 and last 3 valid points for the fit
+    valid_indices = np.where(valid)[0]
+    if len(valid_indices) > 6:
+        valid[valid_indices[:3]] = False
+        valid[valid_indices[-3:]] = False
     if np.sum(valid) >= 2:
         coeffs = np.polyfit(el_centers[valid], profile[valid], deg=1)
         poly = np.poly1d(coeffs)
@@ -433,7 +438,6 @@ warnings.filterwarnings("ignore")
 keys_to_plot = [
     "lexi_image",
     "lexi_image_bgnd_corrected",
-    "lexi_image_bgnd_flat_corrected",
 ]
 
 
@@ -452,11 +456,6 @@ keys_to_add = [
     "background_corrected_r_squared",
     "background_corrected_slope",
     "background_corrected_intercept",
-    "background_flatfield_corrected_total_hist_counts",
-    "background_flatfield_corrected_residuals",
-    "background_flatfield_corrected_r_squared",
-    "background_flatfield_corrected_slope",
-    "background_flatfield_corrected_intercept",
 ]
 for key in keys_to_add:
     data_df[key] = pd.Series(
@@ -467,38 +466,16 @@ for key in keys_to_add:
         )
     )
 
-# Themis flux file:
-themis_spc = "c"
-flux_file_name = (
-    f"../data/lexi_themis_analysis/lexi_themis_{themis_spc}_analysis_lexi_spacecraft.csv"
-)
-if themis_spc == "b":
-    wake_time = "2025-03-16 20:47"
-elif themis_spc == "c":
-    wake_time = "2025-03-16 20:55"
-
-wake_time = pd.to_datetime(wake_time, utc=True)
-
-flux_df = pd.read_csv(flux_file_name)
-# Set Epoch as datetime index
-flux_df["Epoch"] = pd.to_datetime(flux_df["Epoch"], utc=True)
-flux_df.set_index("Epoch", inplace=True)
-flux_df.sort_index(inplace=True)
-# Find the min and max flux before the wake time
-max_flux = flux_df.loc[flux_df.index < wake_time, f"th{themis_spc}_peef_flux"].max()
-min_flux = flux_df.loc[flux_df.index < wake_time, f"th{themis_spc}_peef_flux"].min()
-
-
 # Example
-time_res = "1min"
+time_res = "5min"
 all_l2_files = sorted(
     glob.glob(f"/mnt/cephadrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf")
 )
 l2_files = keep_highest_versions(all_l2_files)
 
-norm_lexi = "linear"
-v_min_lexi = 0
-v_max_lexi = 4e1
+norm_lexi = "log"
+v_min_lexi = 1e-4
+v_max_lexi = 5e-2
 
 line_x_min = 10
 line_x_max = 30
@@ -521,14 +498,10 @@ for i, f in enumerate(l2_files[:]):
     t1 = pd.to_datetime(dat["epoch_end"][...][0], utc=True)
     data_df.loc[len(data_df)] = {"start_time": t0, "end_time": t1}
 
-    flux_val = flux_df.loc[(flux_df.index >= t0) & (flux_df.index <= t1)]
-    # Get the average flux value for the time range
-    avg_flux = flux_val[f"th{themis_spc}_peef_flux"].mean()
-
     # Set the plot theme to dark
     plt.style.use("dark_background")
     # Plot the exposure maps and counts
-    fig, axs = plt.subplots(2, 3, figsize=(20, 12), constrained_layout=True)
+    fig, axs = plt.subplots(2, 2, figsize=(14, 12), constrained_layout=True)
     # Set the hspace and wspace
     fig.subplots_adjust(hspace=0.0, wspace=0.0)
     # Set the default font size
@@ -542,12 +515,13 @@ for i, f in enumerate(l2_files[:]):
         axs[0, 0],
         AZcorn,
         ELcorn,
-        np.asarray(dat["lexi_image"][...])[0] * np.asarray(dat["exposure_map"][...])[0],
-        # / np.asarray(dat["exposure_map"][...])[0]
-        # / np.asarray(dat["pixel_area"][...])[0],
+        np.asarray(dat["lexi_image"][...])[0]
+        / np.asarray(dat["pixel_area"][...])[0]
+        * np.asarray(dat["exposure_map"][...])[0]
+        / np.asarray(dat["exposure_map"][...])[0],
         time_range=time_range,
         title="Raw Counts",
-        cbar_title="Counts/s/$deg^2$",
+        cbar_title="Counts/s/arcmin$^2$",
         norm=norm_lexi,
         vmin=v_min_lexi,
         vmax=v_max_lexi,
@@ -557,27 +531,12 @@ for i, f in enumerate(l2_files[:]):
         AZcorn,
         ELcorn,
         np.asarray(dat["lexi_image_background_corrected"][...])[0]
-        * np.asarray(dat["exposure_map"][...])[0],
-        # / np.asarray(dat["exposure_map"][...])[0]
-        # / np.asarray(dat["pixel_area"][...])[0],
+        / np.asarray(dat["pixel_area"][...])[0]
+        * np.asarray(dat["exposure_map"][...])[0]
+        / np.asarray(dat["exposure_map"][...])[0],
         time_range=time_range,
         title="Background-Corrected Counts",
-        cbar_title="Counts/s/$deg^2$",
-        norm=norm_lexi,
-        vmin=v_min_lexi,
-        vmax=v_max_lexi,
-    )
-    plot_on_az_el(
-        axs[0, 2],
-        AZcorn,
-        ELcorn,
-        np.asarray(dat["lexi_image_background_flatfield_corrected"][...])[0]
-        * np.asarray(dat["exposure_map"][...])[0],
-        # / np.asarray(dat["exposure_map"][...])[0]
-        # / np.asarray(dat["pixel_area"][...])[0],
-        time_range=time_range,
-        title="Background & Flat-Field Corrected Counts",
-        cbar_title="Counts/s/$deg^2$",
+        cbar_title="Counts/s/arcmin$^2$",
         norm=norm_lexi,
         vmin=v_min_lexi,
         vmax=v_max_lexi,
@@ -587,14 +546,15 @@ for i, f in enumerate(l2_files[:]):
     _, data_df = plot_line_profile(
         data_df,
         axs[1, 0],
-        np.asarray(dat["lexi_image"][...])[0] * np.asarray(dat["exposure_map"][...])[0],
-        # / np.asarray(dat["exposure_map"][...])[0]
-        # / np.asarray(dat["pixel_area"][...])[0],
+        np.asarray(dat["lexi_image"][...])[0]
+        / np.asarray(dat["pixel_area"][...])[0]
+        * np.asarray(dat["exposure_map"][...])[0]
+        / np.asarray(dat["exposure_map"][...])[0],
         AZcorn,
         ELcorn,
         title="Line Profile",
-        xlabel="Counts",
-        xlim=x_lim,
+        xlabel="Counts/s/arcmin$^2$",
+        # xlim=x_lim,
         ylim=(20, 29.5),
         key="raw_counts",
     )
@@ -602,33 +562,18 @@ for i, f in enumerate(l2_files[:]):
         data_df,
         axs[1, 1],
         np.asarray(dat["lexi_image_background_corrected"][...])[0]
-        * np.asarray(dat["exposure_map"][...])[0],
-        # / np.asarray(dat["exposure_map"][...])[0]
-        # / np.asarray(dat["pixel_area"][...])[0],
+        / np.asarray(dat["pixel_area"][...])[0]
+        * np.asarray(dat["exposure_map"][...])[0]
+        / np.asarray(dat["exposure_map"][...])[0],
         AZcorn,
         ELcorn,
         title="Line Profile",
-        xlabel="Counts",
-        xlim=x_lim,
+        xlabel="Counts/s/arcmin$^2$",
+        # xlim=x_lim,
         ylim=(20, 29.5),
         key="background_corrected",
     )
-    _, data_df = plot_line_profile(
-        data_df,
-        axs[1, 2],
-        np.asarray(dat["lexi_image_background_flatfield_corrected"][...])[0]
-        * np.asarray(dat["exposure_map"][...])[0],
-        # / np.asarray(dat["exposure_map"][...])[0]
-        # / np.asarray(dat["pixel_area"][...])[0],
-        AZcorn,
-        ELcorn,
-        title="Line Profile",
-        xlabel="Counts",
-        xlim=x_lim,
-        ylim=(20, 29.5),
-        key="background_flatfield_corrected",
-    )
-    for ax in axs.flatten()[:3]:
+    for ax in axs.flatten()[:2]:
         ax.contour(AZcorn[:-1, :-1], ELcorn[:-1, :-1], az_c, colors="c", linewidths=0.6, alpha=0.5)
         ax.contour(AZcorn[:-1, :-1], ELcorn[:-1, :-1], el_c, colors="k", linewidths=0.6, alpha=0.5)
         ax.set_aspect("equal")
@@ -640,7 +585,7 @@ for i, f in enumerate(l2_files[:]):
         ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
         ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
 
-    for ax in axs.flatten()[3:]:
+    for ax in axs.flatten()[2:]:
         # ax.contour(AZcorn[:-1, :-1], ELcorn[:-1, :-1], az_c, colors="c", linewidths=0.6, alpha=0.5)
         # ax.contour(AZcorn[:-1, :-1], ELcorn[:-1, :-1], el_c, colors="k", linewidths=0.6, alpha=0.5)
         # ax.set_aspect("equal")
@@ -651,6 +596,7 @@ for i, f in enumerate(l2_files[:]):
         ax.yaxis.get_offset_text().set(size=12)
         ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
         ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+        ax.set_xscale("linear")
 
     figure_path = Path(f"../figures/line_profiles/bg_corrected/from_l2/{time_res}/az_el/")
     figure_path.mkdir(parents=True, exist_ok=True)
@@ -669,6 +615,6 @@ for i, f in enumerate(l2_files[:]):
 data_folder = Path(f"../data/line_profile_data/bg_corrected/from_l2/{time_res}/")
 data_folder.mkdir(parents=True, exist_ok=True)
 data_df.to_csv(
-    data_folder / f"line_profile_fit_parameters_bg_corrected_{time_res}_flux_avg_.csv",
+    data_folder / f"line_profile_fit_parameters_bg_corrected_no_flat_field_{time_res}.csv",
     index=False,
 )

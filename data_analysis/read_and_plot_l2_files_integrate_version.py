@@ -31,7 +31,7 @@ def keep_highest_versions(paths):
     for p in map(Path, paths):
         stem = p.stem
         try:
-            base, vstr = stem.rsplit("_V", 1)
+            base, vstr = stem.rsplit("_v", 1)
         except ValueError:
             # If no _V part, treat version as 0
             base, vstr = stem, "0"
@@ -939,7 +939,7 @@ for k in range(len(edges) - 1):
     data_df.loc[len(data_df)] = {"start_time": win_start, "end_time": win_end}
 
     # ---- Plot the 3 top + 3 bottom subplots for this integrated window ----
-    fig, axs = plt.subplots(2, 3, figsize=(20, 12), constrained_layout=True)
+    fig, axs = plt.subplots(2, 2, figsize=(20, 12), constrained_layout=True)
     fig.subplots_adjust(hspace=0.0, wspace=0.0)
 
     # fig.suptitle(

@@ -31,7 +31,7 @@ def plot_fit_parameters(data_df, flux_data, key, time_resolution="5min"):
 
     fig.suptitle(f"Line Profile Fit Parameters Over Time for {key}", fontsize=20)
     # Normalize the data to the max value for better visualization
-    
+
     axs[0].plot(
         data_df.index,
         data_df[f"background_flatfield_corrected_{key}"],
@@ -236,7 +236,8 @@ def plot_fit_parameters(data_df, flux_data, key, time_resolution="5min"):
     output_folder = Path("../overleaf_figures/")
     output_folder.mkdir(parents=True, exist_ok=True)
     fig.savefig(
-        output_folder / f"line_profile_fit_parameters_time_series_{key}_{time_resolution}.pdf",
+        output_folder
+        / f"line_profile_fit_parameters_time_series_{key}_{time_resolution}_no_flat_field.pdf",
         dpi=300,
         bbox_inches="tight",
         format="pdf",
@@ -295,8 +296,10 @@ def plot_fit_parameters(data_df, flux_data, key, time_resolution="5min"):
 
 # Load the CSV file
 data_folder = Path("../data/line_profile_data/bg_corrected/from_l2/")
-time_resolution = "1min"
-csv_file = data_folder / f"line_profile_fit_parameters_bg_corrected_{time_resolution}.csv"
+time_resolution = "5min"
+csv_file = (
+    data_folder / f"line_profile_fit_parameters_bg_corrected_no_flat_field_{time_resolution}.csv"
+)
 data_df = pd.read_csv(csv_file)
 
 data_df["start_time"] = pd.to_datetime(data_df["start_time"], utc=True)

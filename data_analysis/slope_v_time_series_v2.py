@@ -21,39 +21,17 @@ mpl.rcParams["pdf.fonttype"] = 42
 # Set the the font to be arial-like for better readability
 mpl.rcParams["font.family"] = "Arial"
 
-time_res = "5min"  # must match how the CSV & L2 path were generated
-data_folder = Path(f"../data/line_profile_data/bg_corrected/from_l2/{time_res}/")
-file_name = f"line_profile_fit_parameters_bg_corrected_{time_res}_flux_avg_.csv"
-data_path = data_folder / file_name
-
-# L2 file pattern (same style as used to generate the CSV)
-L2_GLOB = f"/mnt/cephadrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf"
-
-# Limits for line profiles
-LINE_X_MIN = 1.0
-LINE_X_MAX = 9.5
-EL_Y_LIM = (20.0, 29.5)
-
-# Times to showcase in the top row
-times_to_plot = [
-    datetime.datetime(2025, 3, 16, 19, 10, 0, tzinfo=datetime.timezone.utc),
-    datetime.datetime(2025, 3, 16, 19, 20, 0, tzinfo=datetime.timezone.utc),
-    datetime.datetime(2025, 3, 16, 19, 40, 0, tzinfo=datetime.timezone.utc),
-    datetime.datetime(2025, 3, 16, 20, 0, 0, tzinfo=datetime.timezone.utc),
-    datetime.datetime(2025, 3, 16, 20, 30, 0, tzinfo=datetime.timezone.utc),
-    datetime.datetime(2025, 3, 16, 21, 0, 0, tzinfo=datetime.timezone.utc),
-]
-
-
 # --------------------------------------------
 # Helpers
 # --------------------------------------------
+
+
 def keep_highest_versions(paths):
     best = {}
     for p in map(Path, paths):
         stem = p.stem
         try:
-            base, vstr = stem.rsplit("_V", 1)
+            base, vstr = stem.rsplit("_v", 1)
         except ValueError:
             base, vstr = stem, "0"
         vtup = tuple(int(x) for x in vstr.split("."))
@@ -149,8 +127,10 @@ def load_profile_for_time(l2_file):
         el_c = np.asarray(dat["el_bin_map"][...])[0]
         AZcorn, ELcorn = centers_to_corners_2d(az_c, el_c)
         img = (
-            np.asarray(dat["lexi_image_background_flatfield_corrected"][...])[0]
+            np.asarray(dat["lexi_image_background_corrected"][...])[0]
+            / np.asarray(dat["pixel_area"][...])[0]
             * np.asarray(dat["exposure_map"][...])[0]
+            / np.asarray(dat["exposure_map"][...])[0]
         )
         img = np.where(img <= 0, np.nan, img)
         el_centers, profile, *_ = elevation_profile_normalized(ELcorn, img)
@@ -159,18 +139,69 @@ def load_profile_for_time(l2_file):
         dat.close()
 
 
-def plot_one_line_profile(ax, el_centers, profile, when_utc=None, is_first=False, color="magenta"):
-    ax.scatter(profile, el_centers, s=4, marker="d", color=color, alpha=1)
+def plot_one_line_profile(
+    ax,
+    el_centers,
+    profile,
+    simulated_df=None,
+    when_utc=None,
+    is_first=False,
+    color="magenta",
+    plot_simulated=True,
+):
+    ax.scatter(profile * x_axis_exponent_factor, el_centers, s=4, marker="d", color=color, alpha=1)
     valid = np.isfinite(profile) & np.isfinite(el_centers)
+    # Ignore first 3 and last 3 valid points for the fit
+    valid_indices = np.where(valid)[0]
+    if len(valid_indices) > 6:
+        valid[valid_indices[:3]] = False
+        valid[valid_indices[-3:]] = False
     if valid.sum() >= 2:
-        coeffs = np.polyfit(el_centers[valid], profile[valid], deg=1)
+        coeffs = np.polyfit(
+            el_centers[valid][3:-3], profile[valid][3:-3] * x_axis_exponent_factor, deg=1
+        )
         poly = np.poly1d(coeffs)
         x_fit = np.linspace(np.nanmin(el_centers[valid]), np.nanmax(el_centers[valid]), 100)
         y_fit = poly(x_fit)
         ax.plot(y_fit, x_fit, color="k", linestyle="--", linewidth=1.5)
 
+    # If requested, overplot simulated profile at the same time
+    if plot_simulated and simulated_df is not None and when_utc is not None:
+        # Find the closest time column in simulated_df
+        time_cols = [col for col in simulated_df.columns if col != "Elevation"]
+        time_diffs = [
+            abs((pd.Timestamp(col) - pd.Timestamp(when_utc)).total_seconds()) for col in time_cols
+        ]
+        closest_col = time_cols[np.argmin(time_diffs)]
+        sim_profile = simulated_df[closest_col].values
+        ax.scatter(
+            sim_profile * x_axis_exponent_factor,
+            simulated_df["Elevation"].values,
+            color="blue",
+            s=4,
+            marker="o",
+            alpha=1,
+        )
+        if is_first:
+            # Modify the marker size for the legend
+            marker_size = 8
+            ax.scatter(
+                [],
+                [],
+                color="blue",
+                s=marker_size,
+                marker="o",
+                alpha=1,
+                label="Simulated",
+            )
+
+            ax.legend(loc="upper right", framealpha=1, fontsize=mpl.rcParams["font.size"] * 0.6)
     # Requested limits
     ax.set_xlim(LINE_X_MIN, LINE_X_MAX)
+    ax.set_xscale("linear")
+    # Modify the x-axis so that the ticks are in scientific notation
+    # ax.xaxis.set_major_formatter(mticker.FormatStrFormatter("%.0001e"))
+
     ax.set_ylim(EL_Y_LIM)
     ax.set_xlabel("")  # no axis label
     ax.tick_params(axis="x", which="both", bottom=True, labelbottom=True)
@@ -194,7 +225,7 @@ def plot_one_line_profile(ax, el_centers, profile, when_utc=None, is_first=False
         ax.set_yticks(np.arange(EL_Y_LIM[0], EL_Y_LIM[1] + 1, 2.0))
         ax.spines["left"].set_visible(True)
         # Set the x-axis label only for the first plot
-        ax.set_xlabel(r"Counts [s$^{-1}$ arcmin$^{-2}$]", labelpad=-60)
+        ax.set_xlabel(r"Counts/s/arcmin$^2$ [$\times 10^{-4}$]", labelpad=-52, fontsize=22)
     else:
         ax.set_yticks([])
         ax.spines["left"].set_visible(False)
@@ -205,8 +236,84 @@ def plot_one_line_profile(ax, el_centers, profile, when_utc=None, is_first=False
 
 
 # --------------------------------------------
+# Load the simulated data
+# --------------------------------------------
+time_res = "5min"  # must match how the CSV & L2 path were generated
+simulated_data_folder = Path(f"../data/line_profile_data/bg_corrected/from_l2/{time_res}/")
+file_name = "simulation_results_lexi_gonzalo.csv"
+data_path = simulated_data_folder / file_name
+simulated_df = pd.read_csv(data_path)
+elevation_offset = 20  # degrees
+profile_offset = 4  # counts/s/arcmin^2
+deg_sequare_to_arcmin_square = 60.0 * 60.0
+
+# For keys other than "Elevation", modify it to full datetime
+t0 = pd.Timestamp("2025-03-16", tz="UTC")
+
+# Keep "Elevation" unchanged; convert the rest
+new_cols = []
+for c in simulated_df.columns:
+    if c == "Elevation":
+        new_cols.append(c)
+    else:
+        # Parse the HH:MM string and add to the base date
+        dt = pd.to_datetime(f"{t0.date()} {c}", utc=True)
+        new_cols.append(dt)
+
+simulated_df.columns = new_cols
+
+# Add the elevation offset
+simulated_df["Elevation"] += elevation_offset
+
+# Modify each profile to be in counts/s/arcmin^2
+for c in simulated_df.columns:
+    if c != "Elevation":
+        simulated_df[c] = simulated_df[c] / deg_sequare_to_arcmin_square * profile_offset
+
+
+# --------------------------------------------
 # Load slope time series
 # --------------------------------------------
+
+data_folder = Path(f"../data/line_profile_data/bg_corrected/from_l2/{time_res}/")
+file_name = f"line_profile_fit_parameters_bg_corrected_no_flat_field_{time_res}.csv"
+data_path = data_folder / file_name
+
+# L2 file pattern (same style as used to generate the CSV)
+L2_GLOB = f"/mnt/cephadrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf"
+
+# Limits for line profiles
+x_axis_exponent_factor = 1e4  # to plot x-axis in units of 1e-4
+LINE_X_MIN = 1e-4 * x_axis_exponent_factor
+LINE_X_MAX = 7.50e-4 * x_axis_exponent_factor
+EL_Y_LIM = (20.0, 29.5)
+
+# Times to showcase in the top row
+# times_to_plot = [
+#     datetime.datetime(2025, 3, 16, 19, 12, 30, tzinfo=datetime.timezone.utc),
+#     datetime.datetime(2025, 3, 16, 19, 22, 30, tzinfo=datetime.timezone.utc),
+#     datetime.datetime(2025, 3, 16, 19, 42, 30, tzinfo=datetime.timezone.utc),
+#     datetime.datetime(2025, 3, 16, 20, 2, 30, tzinfo=datetime.timezone.utc),
+#     datetime.datetime(2025, 3, 16, 20, 22, 30, tzinfo=datetime.timezone.utc),
+#     datetime.datetime(2025, 3, 16, 20, 42, 30, tzinfo=datetime.timezone.utc),
+#     datetime.datetime(2025, 3, 16, 21, 2, 30, tzinfo=datetime.timezone.utc),
+# ]
+times_to_plot = [
+    datetime.datetime(2025, 3, 16, 19, 12, 30, tzinfo=datetime.timezone.utc),
+    datetime.datetime(2025, 3, 16, 19, 22, 30, tzinfo=datetime.timezone.utc),
+    datetime.datetime(2025, 3, 16, 19, 37, 30, tzinfo=datetime.timezone.utc),
+    datetime.datetime(2025, 3, 16, 20, 2, 30, tzinfo=datetime.timezone.utc),
+    datetime.datetime(2025, 3, 16, 20, 27, 30, tzinfo=datetime.timezone.utc),
+    datetime.datetime(2025, 3, 16, 20, 52, 30, tzinfo=datetime.timezone.utc),
+    # datetime.datetime(2025, 3, 16, 21, 2, 30, tzinfo=datetime.timezone.utc),
+]
+# len_times_to_plot = 6
+# start_time = pd.Timestamp("2025-03-16 19:05:00", tz="UTC")
+# end_time = pd.Timestamp("2025-03-16 21:05:00", tz="UTC")
+# total_duration_td = end_time - start_time
+# time_res_td = total_duration_td / (len_times_to_plot - 1)
+# times_to_plot = [start_time + i * time_res_td for i in range(len_times_to_plot)]
+
 df = pd.read_csv(data_path)
 
 df["start_time"] = pd.to_datetime(df["start_time"], utc=True)
@@ -215,15 +322,15 @@ df["middle_time"] = df["start_time"] + (df["end_time"] - df["start_time"]) / 2
 df.set_index("middle_time", inplace=True)
 df.sort_index(inplace=True)
 
-if "background_flatfield_corrected_slope" not in df.columns:
-    raise RuntimeError("Expected column 'background_flatfield_corrected_slope' not found in CSV.")
+if "background_corrected_slope" not in df.columns:
+    raise RuntimeError("Expected column 'background_corrected_slope' not found in CSV.")
 
 # --------------------------------------------
 # Build the figure: top = profiles, bottom = slope vs time
 # --------------------------------------------
 n_top = len(times_to_plot)
 # Define 6 specific colors for the time points
-colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]
+colors = ["#1f77b4", "#ff7f0e", "#0591ef", "#d62728", "#9467bd", "#8c564b", "#033b15"]
 
 fig = plt.figure(figsize=(4.0 * n_top, 10), constrained_layout=True)
 gs = fig.add_gridspec(nrows=2, ncols=1, height_ratios=[2.0, 1.2])
@@ -237,10 +344,18 @@ l2_files = list_l2_files()
 # Top row: draw profiles (no labels/axes/titles; fixed x limits)
 for i, tsel in enumerate(times_to_plot):
     fp, t0, t1 = find_file_covering_time(l2_files, tsel)
+    print(f"Time {tsel} covered by file: {fp} (from {t0} to {t1})")
     if fp is not None:
         elc, prof = load_profile_for_time(fp)
         plot_one_line_profile(
-            ax_top[i], elc, prof, when_utc=tsel, is_first=(i == 0), color=colors[i]
+            ax_top[i],
+            elc,
+            prof,
+            simulated_df=simulated_df,
+            when_utc=tsel,
+            is_first=(i == 0),
+            color=colors[i],
+            plot_simulated=True,
         )
     else:
         ax_top[i].set_xlim(LINE_X_MIN, LINE_X_MAX)
@@ -263,7 +378,7 @@ for i, ax in enumerate(ax_top):
         ax.set_ylabel("Elevation [deg]")
     else:
         # Hide labels, not the ticks themselves
-        ax.tick_params(left=False, labelleft=False, bottom=False, labelbottom=False)
+        ax.tick_params(left=False, labelleft=False, bottom=True, labelbottom=False)
         # (optionally still hide spines)
         ax.spines["left"].set_visible(False)
         ax.spines["bottom"].set_visible(False)
@@ -273,7 +388,7 @@ for i, ax in enumerate(ax_top):
     # ax.grid(axis="y", alpha=1, linestyle="-", linewidth=3, color="lightgray", zorder=10)
 
 # Bottom row: slope vs time (NO title); remove top/right spines
-ax_bottom.plot(df.index, df["background_flatfield_corrected_slope"], ls="--", lw=1.5, marker="o")
+ax_bottom.plot(df.index, df["background_corrected_slope"], ls="--", lw=1.5, marker="o")
 ax_bottom.set_xlabel("Time [UTC]")
 # Format x-axis tick labels to only show hours and minutes
 ax_bottom.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
@@ -294,11 +409,9 @@ for idx, tsel in enumerate(times_to_plot):
     # draw a vertical dashed line with matching color
     # Get the delta time from time_res
     delta_time = pd.to_timedelta(time_res) / 2
-    ax_bottom.axvline(
-        tsel + delta_time, linestyle="--", linewidth=1.2, alpha=0.8, zorder=2, color=colors[idx]
-    )
+    ax_bottom.axvline(tsel, linestyle="--", linewidth=1.2, alpha=0.8, zorder=2, color=colors[idx])
     ax_bottom.axvspan(
-        tsel + delta_time / 2, tsel + 3 * delta_time / 2, color=colors[idx], alpha=0.1, zorder=1
+        tsel - delta_time / 2, tsel + delta_time / 2, color=colors[idx], alpha=0.1, zorder=1
     )
 
     # label right beside the line near the top of the axes
@@ -306,7 +419,7 @@ for idx, tsel in enumerate(times_to_plot):
     # Place slightly to the right of the line with an offset, anchored at the top
     ax_bottom.annotate(
         label,
-        xy=(tsel, (ymin + ymax) / 2),
+        xy=(tsel - delta_time, (ymin + ymax) / 2),
         xycoords=("data", "data"),
         xytext=(3, -4),  # small offset in points (right, down)
         textcoords="offset points",
@@ -327,7 +440,7 @@ ax_bottom.axvspan(
 )
 ax_bottom.annotate(
     "Sunset Ends",
-    xy=(sunset_time, 1.1 * (ymin + ymax) / 2),
+    xy=(sunset_time, 0.8 * (ymin + ymax)),
     xycoords=("data", "data"),
     xytext=(5, -5),  # small offset in points (right, down)
     textcoords="offset points",
@@ -345,7 +458,10 @@ ax_bottom.set_xlim(
 outdir = Path("../figures/slope_time_series/")
 outdir.mkdir(parents=True, exist_ok=True)
 figure_format = "pdf"  # "pdf" or "png"
-outfile = outdir / f"slope_v_time_{time_res}_profiles_plus_series_vlines_v2.{figure_format}"
+outfile = (
+    outdir
+    / f"slope_v_time_{time_res}_profiles_plus_series_vlines_v2_no_flat_field_{len(times_to_plot)}.{figure_format}"
+)
 fig.savefig(outfile, dpi=300, bbox_inches="tight", pad_inches=0.1)
 print(f"Saved figure: {outfile}")
 # plt.show()
