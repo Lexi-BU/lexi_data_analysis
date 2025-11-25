@@ -20,6 +20,9 @@ mpl.rcParams.update({"font.size": 25})
 mpl.rcParams["pdf.fonttype"] = 42
 # Set the the font to be arial-like for better readability
 mpl.rcParams["font.family"] = "Arial"
+# Set latex-style text rendering
+mpl.rcParams["text.usetex"] = True
+
 
 # --------------------------------------------
 # Helpers
@@ -289,24 +292,24 @@ LINE_X_MAX = 7.50e-4 * x_axis_exponent_factor
 EL_Y_LIM = (20.0, 29.5)
 
 # Times to showcase in the top row
-# times_to_plot = [
-#     datetime.datetime(2025, 3, 16, 19, 12, 30, tzinfo=datetime.timezone.utc),
-#     datetime.datetime(2025, 3, 16, 19, 22, 30, tzinfo=datetime.timezone.utc),
-#     datetime.datetime(2025, 3, 16, 19, 42, 30, tzinfo=datetime.timezone.utc),
-#     datetime.datetime(2025, 3, 16, 20, 2, 30, tzinfo=datetime.timezone.utc),
-#     datetime.datetime(2025, 3, 16, 20, 22, 30, tzinfo=datetime.timezone.utc),
-#     datetime.datetime(2025, 3, 16, 20, 42, 30, tzinfo=datetime.timezone.utc),
-#     datetime.datetime(2025, 3, 16, 21, 2, 30, tzinfo=datetime.timezone.utc),
-# ]
 times_to_plot = [
     datetime.datetime(2025, 3, 16, 19, 12, 30, tzinfo=datetime.timezone.utc),
     datetime.datetime(2025, 3, 16, 19, 22, 30, tzinfo=datetime.timezone.utc),
-    datetime.datetime(2025, 3, 16, 19, 37, 30, tzinfo=datetime.timezone.utc),
+    datetime.datetime(2025, 3, 16, 19, 42, 30, tzinfo=datetime.timezone.utc),
     datetime.datetime(2025, 3, 16, 20, 2, 30, tzinfo=datetime.timezone.utc),
-    datetime.datetime(2025, 3, 16, 20, 27, 30, tzinfo=datetime.timezone.utc),
-    datetime.datetime(2025, 3, 16, 20, 52, 30, tzinfo=datetime.timezone.utc),
-    # datetime.datetime(2025, 3, 16, 21, 2, 30, tzinfo=datetime.timezone.utc),
+    datetime.datetime(2025, 3, 16, 20, 22, 30, tzinfo=datetime.timezone.utc),
+    datetime.datetime(2025, 3, 16, 20, 42, 30, tzinfo=datetime.timezone.utc),
+    datetime.datetime(2025, 3, 16, 21, 2, 30, tzinfo=datetime.timezone.utc),
 ]
+# times_to_plot = [
+#     datetime.datetime(2025, 3, 16, 19, 12, 30, tzinfo=datetime.timezone.utc),
+#     datetime.datetime(2025, 3, 16, 19, 22, 30, tzinfo=datetime.timezone.utc),
+#     datetime.datetime(2025, 3, 16, 19, 37, 30, tzinfo=datetime.timezone.utc),
+#     datetime.datetime(2025, 3, 16, 20, 2, 30, tzinfo=datetime.timezone.utc),
+#     datetime.datetime(2025, 3, 16, 20, 27, 30, tzinfo=datetime.timezone.utc),
+#     datetime.datetime(2025, 3, 16, 20, 52, 30, tzinfo=datetime.timezone.utc),
+#     # datetime.datetime(2025, 3, 16, 21, 2, 30, tzinfo=datetime.timezone.utc),
+# ]
 # len_times_to_plot = 6
 # start_time = pd.Timestamp("2025-03-16 19:05:00", tz="UTC")
 # end_time = pd.Timestamp("2025-03-16 21:05:00", tz="UTC")

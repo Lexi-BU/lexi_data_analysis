@@ -8,6 +8,15 @@ import pandas as pd
 from matplotlib import dates as mdates
 from matplotlib.patches import FancyArrowPatch
 
+plt.style.use("default")
+mpl.rcParams.update({"font.size": 22})
+# Set the fonttype to 42 to avoid Type 3 fonts in the output PDF/PNGs
+mpl.rcParams["pdf.fonttype"] = 42
+# Set the the font to be arial-like for better readability
+mpl.rcParams["font.family"] = "Arial"
+# Set latex-style text rendering
+mpl.rcParams["text.usetex"] = True
+
 
 def horizontal_labeled_arrow(
     ax, x0, x1, y, label, facecolor="white", alpha=0.25, text_color="black"
