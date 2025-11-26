@@ -21,7 +21,7 @@ mpl.rcParams["pdf.fonttype"] = 42
 # Set the the font to be arial-like for better readability
 mpl.rcParams["font.family"] = "Arial"
 # Set latex-style text rendering
-mpl.rcParams["text.usetex"] = True
+mpl.rcParams["text.usetex"] = False
 
 
 # --------------------------------------------
@@ -228,7 +228,16 @@ def plot_one_line_profile(
         ax.set_yticks(np.arange(EL_Y_LIM[0], EL_Y_LIM[1] + 1, 2.0))
         ax.spines["left"].set_visible(True)
         # Set the x-axis label only for the first plot
-        ax.set_xlabel(r"Counts/s/arcmin$^2$ [$\times 10^{-4}$]", labelpad=-52, fontsize=22)
+        ax.set_xlabel(
+            "Counts [s$^{-1}$ arcmin$^{-2}$] \n ($\\times 10^{-4}$)",
+            labelpad=-30,
+            fontsize=0.85 * mpl.rcParams["font.size"],
+            rotation=0,
+            va="bottom",
+            ha="left",
+            # Set the x position to be at the center of the entire row of subplots
+            x=0.01,
+        )
     else:
         ax.set_yticks([])
         ax.spines["left"].set_visible(False)
@@ -291,25 +300,29 @@ LINE_X_MIN = 1e-4 * x_axis_exponent_factor
 LINE_X_MAX = 7.50e-4 * x_axis_exponent_factor
 EL_Y_LIM = (20.0, 29.5)
 
-# Times to showcase in the top row
-times_to_plot = [
-    datetime.datetime(2025, 3, 16, 19, 12, 30, tzinfo=datetime.timezone.utc),
-    datetime.datetime(2025, 3, 16, 19, 22, 30, tzinfo=datetime.timezone.utc),
-    datetime.datetime(2025, 3, 16, 19, 42, 30, tzinfo=datetime.timezone.utc),
-    datetime.datetime(2025, 3, 16, 20, 2, 30, tzinfo=datetime.timezone.utc),
-    datetime.datetime(2025, 3, 16, 20, 22, 30, tzinfo=datetime.timezone.utc),
-    datetime.datetime(2025, 3, 16, 20, 42, 30, tzinfo=datetime.timezone.utc),
-    datetime.datetime(2025, 3, 16, 21, 2, 30, tzinfo=datetime.timezone.utc),
-]
-# times_to_plot = [
-#     datetime.datetime(2025, 3, 16, 19, 12, 30, tzinfo=datetime.timezone.utc),
-#     datetime.datetime(2025, 3, 16, 19, 22, 30, tzinfo=datetime.timezone.utc),
-#     datetime.datetime(2025, 3, 16, 19, 37, 30, tzinfo=datetime.timezone.utc),
-#     datetime.datetime(2025, 3, 16, 20, 2, 30, tzinfo=datetime.timezone.utc),
-#     datetime.datetime(2025, 3, 16, 20, 27, 30, tzinfo=datetime.timezone.utc),
-#     datetime.datetime(2025, 3, 16, 20, 52, 30, tzinfo=datetime.timezone.utc),
-#     # datetime.datetime(2025, 3, 16, 21, 2, 30, tzinfo=datetime.timezone.utc),
-# ]
+series_to_plot = 1
+
+if series_to_plot == 1:
+    # Times to showcase in the top row
+    times_to_plot = [
+        datetime.datetime(2025, 3, 16, 19, 12, 30, tzinfo=datetime.timezone.utc),
+        datetime.datetime(2025, 3, 16, 19, 22, 30, tzinfo=datetime.timezone.utc),
+        datetime.datetime(2025, 3, 16, 19, 42, 30, tzinfo=datetime.timezone.utc),
+        datetime.datetime(2025, 3, 16, 20, 2, 30, tzinfo=datetime.timezone.utc),
+        datetime.datetime(2025, 3, 16, 20, 22, 30, tzinfo=datetime.timezone.utc),
+        datetime.datetime(2025, 3, 16, 20, 42, 30, tzinfo=datetime.timezone.utc),
+        datetime.datetime(2025, 3, 16, 21, 2, 30, tzinfo=datetime.timezone.utc),
+    ]
+else:
+    times_to_plot = [
+        datetime.datetime(2025, 3, 16, 19, 12, 30, tzinfo=datetime.timezone.utc),
+        datetime.datetime(2025, 3, 16, 19, 22, 30, tzinfo=datetime.timezone.utc),
+        datetime.datetime(2025, 3, 16, 19, 37, 30, tzinfo=datetime.timezone.utc),
+        datetime.datetime(2025, 3, 16, 20, 2, 30, tzinfo=datetime.timezone.utc),
+        datetime.datetime(2025, 3, 16, 20, 27, 30, tzinfo=datetime.timezone.utc),
+        datetime.datetime(2025, 3, 16, 20, 52, 30, tzinfo=datetime.timezone.utc),
+        # datetime.datetime(2025, 3, 16, 21, 2, 30, tzinfo=datetime.timezone.utc),
+    ]
 # len_times_to_plot = 6
 # start_time = pd.Timestamp("2025-03-16 19:05:00", tz="UTC")
 # end_time = pd.Timestamp("2025-03-16 21:05:00", tz="UTC")
@@ -335,7 +348,7 @@ n_top = len(times_to_plot)
 # Define 6 specific colors for the time points
 colors = ["#1f77b4", "#ff7f0e", "#0591ef", "#d62728", "#9467bd", "#8c564b", "#033b15"]
 
-fig = plt.figure(figsize=(4.0 * n_top, 10), constrained_layout=True)
+fig = plt.figure(figsize=(3.0 * n_top, 10), constrained_layout=True)
 gs = fig.add_gridspec(nrows=2, ncols=1, height_ratios=[2.0, 1.2])
 gs_top = gs[0].subgridspec(1, n_top, wspace=0.05)  # tight spacing since axes are invisible
 ax_top = [fig.add_subplot(gs_top[0, i]) for i in range(n_top)]
@@ -458,7 +471,8 @@ ax_bottom.set_xlim(
     df.index.max() + pd.Timedelta(minutes=1.5),
 )
 # Save
-outdir = Path("../figures/slope_time_series/")
+# outdir = Path("../figures/slope_time_series/")
+outdir = Path("/home/cephadrius/Desktop/git/overleaf_projects/lexi_draft/figures/")
 outdir.mkdir(parents=True, exist_ok=True)
 figure_format = "pdf"  # "pdf" or "png"
 outfile = (
