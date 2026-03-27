@@ -467,9 +467,12 @@ for key in keys_to_add:
     )
 
 # Example
-time_res = "5min"
+time_res = "105min_singular"
 all_l2_files = sorted(
-    glob.glob(f"/mnt/cephadrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf")
+    # glob.glob(f"/mnt/cephadrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf")
+    glob.glob(
+        "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/data/105min/clps-bgm1_lexi_l2-images*.cdf"
+    )
 )
 l2_files = keep_highest_versions(all_l2_files)
 

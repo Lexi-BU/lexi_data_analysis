@@ -872,11 +872,12 @@ for key in keys_to_add:
 # Example
 time_res = "1min"
 all_l2_files = sorted(
-    glob.glob(f"/mnt/cephadrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf")
+    # glob.glob(f"/mnt/cephadrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf")
+    glob.glob("/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/data/1min/clps-bgm1_lexi_l2-images*.cdf")
 )
 l2_files = keep_highest_versions(all_l2_files)
 
-integrate_time = 2
+integrate_time = 1
 
 if integrate_time == 1:
     integration = "29min"  # e.g., "5min", "10min", "30min", "1H"

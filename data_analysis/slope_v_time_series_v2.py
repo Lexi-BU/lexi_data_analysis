@@ -177,10 +177,11 @@ def plot_one_line_profile(
         ]
         closest_col = time_cols[np.argmin(time_diffs)]
         sim_profile = simulated_df[closest_col].values
+
         ax.scatter(
             sim_profile * x_axis_exponent_factor,
             simulated_df["Elevation"].values,
-            color="blue",
+            color="green",
             s=4,
             marker="o",
             alpha=1,
@@ -191,7 +192,7 @@ def plot_one_line_profile(
             ax.scatter(
                 [],
                 [],
-                color="blue",
+                color="green",
                 s=marker_size,
                 marker="o",
                 alpha=1,
@@ -360,7 +361,7 @@ l2_files = list_l2_files()
 # Top row: draw profiles (no labels/axes/titles; fixed x limits)
 for i, tsel in enumerate(times_to_plot):
     fp, t0, t1 = find_file_covering_time(l2_files, tsel)
-    print(f"Time {tsel} covered by file: {fp} (from {t0} to {t1})")
+    # print(f"Time {tsel} covered by file: {fp} (from {t0} to {t1})")
     if fp is not None:
         elc, prof = load_profile_for_time(fp)
         plot_one_line_profile(
@@ -404,7 +405,16 @@ for i, ax in enumerate(ax_top):
     # ax.grid(axis="y", alpha=1, linestyle="-", linewidth=3, color="lightgray", zorder=10)
 
 # Bottom row: slope vs time (NO title); remove top/right spines
-ax_bottom.plot(df.index, df["background_corrected_slope"], ls="--", lw=1.5, marker="o")
+# ax_bottom.plot(df.index, df["background_corrected_slope"], ls="--", lw=1.5, marker="o")
+ax_bottom.step(
+    df.index,
+    df["background_corrected_slope"],
+    where="mid",
+    ls="--",
+    lw=1.5,
+    marker="o",
+    label="Measured Slope",
+)
 ax_bottom.set_xlabel("Time [UTC]")
 # Format x-axis tick labels to only show hours and minutes
 ax_bottom.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
@@ -427,7 +437,7 @@ for idx, tsel in enumerate(times_to_plot):
     delta_time = pd.to_timedelta(time_res) / 2
     ax_bottom.axvline(tsel, linestyle="--", linewidth=1.2, alpha=0.8, zorder=2, color=colors[idx])
     ax_bottom.axvspan(
-        tsel - delta_time / 2, tsel + delta_time / 2, color=colors[idx], alpha=0.1, zorder=1
+        tsel - delta_time, tsel + delta_time, color=colors[idx], alpha=0.1, zorder=1
     )
 
     # label right beside the line near the top of the axes
@@ -470,6 +480,95 @@ ax_bottom.set_xlim(
     df.index.min() - pd.Timedelta(minutes=1.5),
     df.index.max() + pd.Timedelta(minutes=1.5),
 )
+
+
+# --------------------------------------------
+# Get the best fit line slope and intercept between Elevation and values of each column in
+# df_simulated
+time_cols = [col for col in simulated_df.columns if col != "Elevation"]
+slope_list = []
+for col in time_cols:
+    valid = np.isfinite(simulated_df["Elevation"].values) & np.isfinite(simulated_df[col].values)
+    if valid.sum() >= 2:
+        coeffs = np.polyfit(
+            simulated_df["Elevation"].values[valid],
+            simulated_df[col].values[valid],
+            deg=1,
+        )
+        slope, intercept = coeffs
+        slope_list.append(slope)
+        # print(
+        #     f"Simulated data column {col}: slope = {slope:.6e} [counts/s/arcmin^2]/deg, intercept = {intercept:.6e} [counts/s/arcmin^2]"
+        # )
+slope_array = np.array(slope_list)
+# Plot the slope array using twin axes on ax_bottom
+ax_slope = ax_bottom
+# Shift time_cols by 2.5 minutes to align with the center of the time bins\
+shifted_time_cols = [col + pd.Timedelta(minutes=2.5) for col in time_cols]
+# plot using step plot
+ax_slope.step(
+    pd.to_datetime(shifted_time_cols, utc=True),
+    slope_array,
+    where="mid",
+    color="green",
+    linestyle="--",
+    linewidth=1.5,
+    marker="s",
+    label="Simulated Slope",
+)
+# ax_slope.plot(
+#     pd.to_datetime(time_cols, utc=True),
+#     slope_array,
+#     color="green",
+#     linestyle="--",
+#     linewidth=1.5,
+#     marker="s",
+#     label="Simulated Slope",
+# )
+# ax_slope.set_ylabel("Simulated Slope", color="green")
+# ax_slope.tick_params(axis="y", labelcolor="green")
+# ax_slope.spines["top"].set_visible(False)
+# ax_slope.spines["right"].set_visible(True)
+# ax_slope.grid(alpha=0.0)  # no grid for twin axis
+# --------------------------------------------
+
+# Add annotation at the bottom right corner with green square and label "Simulated Slope", similarly
+# for measured slope with dashed line and circle marker
+# Combined annotation box
+ax_bottom.annotate(
+    "Simulated\nMeasured",
+    xy=(0.9, 0.20),
+    xycoords="axes fraction",
+    ha="left",
+    va="top",
+    fontsize=0.75 * mpl.rcParams["font.size"],
+    bbox=dict(facecolor="white", alpha=0.3, pad=3, edgecolor="None"),
+)
+
+# Simulated slope sample (top)
+ax_bottom.plot(
+    [0.87, 0.89],
+    [0.165, 0.165],
+    transform=ax_bottom.transAxes,
+    color="green",
+    linestyle="--",
+    linewidth=0.5,
+    marker="s",
+    markersize=5,
+)
+
+# Measured slope sample (bottom)
+ax_bottom.plot(
+    [0.87, 0.89],
+    [0.085, 0.085],
+    transform=ax_bottom.transAxes,
+    color=colors[0],
+    linestyle="--",
+    linewidth=0.5,
+    marker="o",
+    markersize=5,
+)
+
 # Save
 # outdir = Path("../figures/slope_time_series/")
 outdir = Path("/home/cephadrius/Desktop/git/overleaf_projects/lexi_draft/figures/")
@@ -477,7 +576,7 @@ outdir.mkdir(parents=True, exist_ok=True)
 figure_format = "pdf"  # "pdf" or "png"
 outfile = (
     outdir
-    / f"slope_v_time_{time_res}_profiles_plus_series_vlines_v2_no_flat_field_{len(times_to_plot)}.{figure_format}"
+    / f"slope_v_time_{time_res}_profiles_plus_series_vlines_v2_no_flat_field_{len(times_to_plot)}_v2.{figure_format}"
 )
 fig.savefig(outfile, dpi=300, bbox_inches="tight", pad_inches=0.1)
 print(f"Saved figure: {outfile}")

@@ -385,7 +385,9 @@ def plot_line_profile(
     el_centers = elev_row_mean
     profile = norm_profile
     if profile is None or np.all(np.isnan(profile)):
-        return ax, data_df
+        profile_col = f"profile_{key}" if key else "profile"
+        el_col = f"el_centers_{key}" if key else "el_centers"
+        return ax, data_df, pd.DataFrame(columns=[el_col, profile_col])
 
     # Get the best fit line (ignoring NaNs)
     valid = ~np.isnan(el_centers) & ~np.isnan(profile)
@@ -478,7 +480,16 @@ def plot_line_profile(
             )
         if f"{key}_total_hist_counts" in data_df.columns:
             data_df.at[len(data_df) - 1, f"{key}_total_hist_counts"] = total_counts
-    return ax, data_df
+            
+    profile_col = f"counts_{key}" if key else "profile"
+    el_col = f"el_centers_{key}" if key else "el_centers"
+    
+    profile_df = pd.DataFrame({
+        profile_col: profile,
+        el_col: el_centers
+    })
+    
+    return ax, data_df, profile_df
 
 
 def plot_selected_integrated_hist_with_marginals(
@@ -859,15 +870,26 @@ for key in keys_to_add:
 # Example
 time_res = "1min"
 all_l2_files = sorted(
-    glob.glob(f"/mnt/cephadrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf")
+    # glob.glob(f"/mnt/cephadrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf")
+    glob.glob(
+        "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/data/1min/clps-bgm1_lexi_l2-images*.cdf"
+    )
 )
 l2_files = keep_highest_versions(all_l2_files)
 
 # ---- Integration configuration ----
-integration = "29min"  # e.g., "5min", "10min", "30min", "1H"
-# Optionally restrict the time span (None => use full span of files)
-span_start = "2025-03-16 19:00:00+00:00"
-span_end = "2025-03-16 19:29:00+00:00"
+integrate_time = 2
+
+if integrate_time == 1:
+    integration = "29min"  # e.g., "5min", "10min", "30min", "1H"
+    # Optionally restrict the time span (None => use full span of files)
+    span_start = "2025-03-16 19:00:00+00:00"
+    span_end = "2025-03-16 19:29:00+00:00"
+else:
+    integration = "105min"  # e.g., "5min", "10min", "30min", "1H"
+    # Optionally restrict the time span (None => use full span of files)
+    span_start = "2025-03-16 19:30:00+00:00"
+    span_end = "2025-03-16 21:15:00+00:00"
 
 fig_format = "pdf"  # "png" or "pdf"
 
@@ -939,7 +961,7 @@ for k in range(len(edges) - 1):
     data_df.loc[len(data_df)] = {"start_time": win_start, "end_time": win_end}
 
     # ---- Plot the 3 top + 3 bottom subplots for this integrated window ----
-    fig, axs = plt.subplots(2, 2, figsize=(20, 12), constrained_layout=True)
+    fig, axs = plt.subplots(2, 3, figsize=(20, 12), constrained_layout=True)
     fig.subplots_adjust(hspace=0.0, wspace=0.0)
 
     # fig.suptitle(
@@ -988,7 +1010,7 @@ for k in range(len(edges) - 1):
 
     # --- Bottom row: integrated line profiles ---
     x_lim = (line_x_min, line_x_max)
-    _, data_df = plot_line_profile(
+    _, data_df, profile_df_raw = plot_line_profile(
         data_df,
         axs[1, 0],
         sum_raw,
@@ -1001,7 +1023,7 @@ for k in range(len(edges) - 1):
         ylim=(20, 29.5),
         key="raw_counts",
     )
-    _, data_df = plot_line_profile(
+    _, data_df, profile_df_bg = plot_line_profile(
         data_df,
         axs[1, 1],
         sum_bg,
@@ -1014,7 +1036,7 @@ for k in range(len(edges) - 1):
         ylim=(20, 29.5),
         key="background_corrected",
     )
-    _, data_df = plot_line_profile(
+    _, data_df, profile_df_bgff = plot_line_profile(
         data_df,
         axs[1, 2],
         sum_bgff,
@@ -1027,6 +1049,25 @@ for k in range(len(edges) - 1):
         ylim=(20, 29.5),
         key="background_flatfield_corrected",
     )
+    # Combine the three profile dataframes and save them to a csv file
+    combined_profile_df = pd.concat([profile_df_raw, profile_df_bg, profile_df_bgff], axis=1)
+    # Rename "el_centers_raw_counts" to "elevation"
+    combined_profile_df = combined_profile_df.rename(columns={"el_centers_raw_counts": "elevation"})
+    # Remove el_centers_background_corrected and el_centers_background_flatfield_corrected from the combined dataframe
+    combined_profile_df = combined_profile_df.drop(columns=["el_centers_background_corrected", "el_centers_background_flatfield_corrected"])
+
+    # Rename counts_raw_counts to raw_counts, counts_background_corrected to background_corrected_counts and counts_background_flatfield_corrected to background_flatfield_corrected_counts
+    combined_profile_df = combined_profile_df.rename(columns={"counts_raw_counts": "raw_counts", "counts_background_corrected": "background_corrected_counts", "counts_background_flatfield_corrected": "background_flatfield_corrected_counts"})
+
+    # Round off all values to 5 sig-figs
+    combined_profile_df = combined_profile_df.round(5)
+
+    # Set elevation as index
+    combined_profile_df = combined_profile_df.set_index("elevation")
+
+
+    # Save the combined profile dataframe to a csv file
+    combined_profile_df.to_csv(f"/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/data/line_profile_data/bg_corrected/from_l2/combined_profile_df_{win_start.strftime('%Y%m%d_%H%M%S')}_{win_end.strftime('%Y%m%d_%H%M%S')}.csv")
 
     # Cosmetic overlays + tick formatting (same as your original)
     for ax in axs.flatten()[:3]:
@@ -1054,6 +1095,7 @@ for k in range(len(edges) - 1):
     fig_name = (
         f"lexi_l2_integrated_{win_start.strftime('%Y%m%d_%H%M%S')}_{win_end.strftime('%H%M%S')}"
     )
+    combined_profile_df.to_csv(outdir / f"{fig_name}.csv", index=False)
     fig.savefig(
         outdir / f"{fig_name}.{fig_format}",
         dpi=200,
@@ -1061,6 +1103,7 @@ for k in range(len(edges) - 1):
         pad_inches=0.1,
         format=fig_format,
     )
+    print(f"Figure and CSV saved to {outdir / fig_name}.*")
     plt.close(fig)
 
     sums = {"sum_raw": sum_raw, "sum_bg": sum_bg, "sum_bgff": sum_bgff}
