@@ -166,6 +166,7 @@ cython_debug/
 data/*
 figures/*
 movies/*
+/lexi_hk_data_*.csv
 /data_analysis/themis_data/*
 /data_analysis/data/*
 /data_analysis/figures/*
