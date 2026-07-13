@@ -54,7 +54,7 @@ themis_df.to_csv(resampled_themis_file_name)
 
 # Load the Lexi counts DataFrame
 lexi_counts_file_name = (
-    "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_pipeline/data/counts_per_second.csv"
+    "/home/cephandrius/Desktop/git/Lexi-BU/lexi_data_pipeline/data/counts_per_second.csv"
 )
 lexi_counts_df = pd.read_csv(lexi_counts_file_name)
 # Rename the first column to 'epoch' and set it as the index

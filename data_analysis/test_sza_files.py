@@ -5,7 +5,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.dates import DateFormatter
 
-mike_file = "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_pipeline/data/ephemeris_data/LEXIAngleData_ACTUAL_20250723.csv"
+mike_file = "/home/cephandrius/Desktop/git/Lexi-BU/lexi_data_pipeline/data/ephemeris_data/LEXIAngleData_ACTUAL_20250723.csv"
 df_mike = pd.read_csv(mike_file)
 # Rename "[Epoch (UTC)]" to "Epoch"
 df_mike.rename(columns={"[Epoch (UTC)]": "Epoch"}, inplace=True)

@@ -293,7 +293,7 @@ file_name = f"line_profile_fit_parameters_bg_corrected_no_flat_field_{time_res}.
 data_path = data_folder / file_name
 
 # L2 file pattern (same style as used to generate the CSV)
-L2_GLOB = f"/mnt/cephadrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf"
+L2_GLOB = f"/mnt/cephandrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf"
 
 # Limits for line profiles
 x_axis_exponent_factor = 1e4  # to plot x-axis in units of 1e-4
@@ -571,7 +571,7 @@ ax_bottom.plot(
 
 # Save
 # outdir = Path("../figures/slope_time_series/")
-outdir = Path("/home/cephadrius/Desktop/git/overleaf_projects/lexi_draft/figures/")
+outdir = Path("/home/cephandrius/Desktop/git/overleaf_projects/lexi_draft/figures/")
 outdir.mkdir(parents=True, exist_ok=True)
 figure_format = "pdf"  # "pdf" or "png"
 outfile = (

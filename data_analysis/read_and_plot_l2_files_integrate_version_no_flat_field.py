@@ -21,8 +21,8 @@ plt.style.use("default")
 mpl.rcParams.update({"font.size": 22})
 # Set the fonttype to 42 to avoid Type 3 fonts in the output PDF/PNGs
 mpl.rcParams["pdf.fonttype"] = 42
-# Set the the font to be arial-like for better readability
-mpl.rcParams["font.family"] = "Arial"
+# Use Matplotlib's bundled cross-platform sans-serif font.
+mpl.rcParams["font.family"] = "DejaVu Sans"
 # Set latex-style text rendering
 mpl.rcParams["text.usetex"] = False
 
@@ -872,8 +872,8 @@ for key in keys_to_add:
 # Example
 time_res = "1min"
 all_l2_files = sorted(
-    # glob.glob(f"/mnt/cephadrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf")
-    glob.glob("/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/data/1min/clps-bgm1_lexi_l2-images*.cdf")
+    # glob.glob(f"/mnt/cephandrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf")
+    glob.glob("/home/cephandrius/Desktop/git/Lexi-BU/lexi_data_analysis/data/1min/clps-bgm1_lexi_l2-images*.cdf")
 )
 l2_files = keep_highest_versions(all_l2_files)
 
@@ -885,7 +885,7 @@ if integrate_time == 1:
     span_start = "2025-03-16 19:00:00+00:00"
     span_end = "2025-03-16 19:29:00+00:00"
 else:
-    integration = "105min"  # e.g., "5min", "10min", "30min", "1H"
+    integration = "30min"  # e.g., "5min", "10min", "30min", "1H"
     # Optionally restrict the time span (None => use full span of files)
     span_start = "2025-03-16 19:30:00+00:00"
     span_end = "2025-03-16 21:15:00+00:00"
@@ -1043,7 +1043,7 @@ for k in range(len(edges) - 1):
     # outdir = Path(
     #     f"../figures/line_profiles/bg_corrected/from_l2/no_flat/az_el_integrated_{integration}/"
     # )
-    outdir = Path("/home/cephadrius/Desktop/git/overleaf_projects/lexi_draft/figures/")
+    outdir = Path("/home/cephandrius/Desktop/git/overleaf_projects/lexi_draft/figures/")
     outdir.mkdir(parents=True, exist_ok=True)
     fig_name = (
         f"lexi_l2_integrated_{win_start.strftime('%Y%m%d_%H%M%S')}_{win_end.strftime('%H%M%S')}"
@@ -1131,7 +1131,7 @@ for k in range(len(edges) - 1):
         # outdir = Path(
         #     f"../figures/line_profiles/bg_corrected/from_l2/no_flat/az_el_integrated_{integration}/histmaps_with_marginals/"
         # )
-        outdir = Path("/home/cephadrius/Desktop/git/overleaf_projects/lexi_draft/figures/")
+        outdir = Path("/home/cephandrius/Desktop/git/overleaf_projects/lexi_draft/figures/")
         outdir.mkdir(parents=True, exist_ok=True)
         fname = f"{hist_choice}_normalized_{win_start.strftime('%Y%m%d_%H%M%S')}_{win_end.strftime('%H%M%S')}.{fig_format}"
         fig.savefig(outdir / fname, dpi=200, bbox_inches="tight")

@@ -224,14 +224,14 @@ if __name__ == "__main__":
     start_time_str = "2025-03-09T00:10:00Z"
     interval_length = 10  # in minutes
     stop_time_str = "2025-03-09T11:59:00Z"
-    data_folder_location = "/mnt/cephadrius/bu_research/lexi_data/L1b/sci/cdf/"
+    data_folder_location = "/mnt/cephandrius/bu_research/lexi_data/L1b/sci/cdf/"
     # Run the main function
     main(start_time_str, interval_length, stop_time_str, data_folder_location)
 
 # Example usage:
 # start_time = parser.parse("2025-03-09T01:10:00Z")
 # end_time = parser.parse("2025-03-09T01:20:00Z")
-# data_folder_location = "/mnt/cephadrius/bu_research/lexi_data/L1b/sci/cdf/"
+# data_folder_location = "/mnt/cephandrius/bu_research/lexi_data/L1b/sci/cdf/"
 # file_list = get_file_list(data_folder_location, start_time, end_time)
 # df = read_all_data_files(
 #     file_list, start_time=start_time, end_time=end_time, return_data_type="dataframe"

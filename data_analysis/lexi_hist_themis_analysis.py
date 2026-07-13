@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 lexi_ephemera_file = Path(
-    "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_pipeline/data/ephemeris_data/LEXIAngleData_ACTUAL_20250723_10min_linear.csv"
+    "/home/cephandrius/Desktop/git/Lexi-BU/lexi_data_pipeline/data/ephemeris_data/LEXIAngleData_ACTUAL_20250723_10min_linear.csv"
 )
 lexi_ephemera_df = pd.read_csv(lexi_ephemera_file)
 
@@ -26,7 +26,7 @@ themis_spc = "c"  # THEMIS spacecraft to use
 
 # Wake: B : 20:47, C: 20:55
 themis_ephemera_file = Path(
-    f"/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/data/themis_l2_electron_params/themis_{themis_spc}_l2_electron_params_2025-03-16T19:00:00_to_2025-03-16T22:00:00.csv"
+    f"/home/cephandrius/Desktop/git/Lexi-BU/lexi_data_analysis/data/themis_l2_electron_params/themis_{themis_spc}_l2_electron_params_2025-03-16T19:00:00_to_2025-03-16T22:00:00.csv"
 )
 themis_ephemera_df = pd.read_csv(themis_ephemera_file)
 

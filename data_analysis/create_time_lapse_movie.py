@@ -7,7 +7,7 @@ from moviepy import ImageSequenceClip
 from PIL import Image
 
 # Inputs
-image_folder = "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/figures/line_profiles/bg_corrected/from_l2/az_el/"
+image_folder = "/home/cephandrius/Desktop/git/Lexi-BU/lexi_data_analysis/figures/line_profiles/bg_corrected/from_l2/az_el/"
 start_time = "2025-03-16-19-00-00"
 end_time = "2025-03-16-21-15-00"
 

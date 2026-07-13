@@ -102,6 +102,6 @@ def mp4_to_gif(
 
 if __name__ == "__main__":
     mp4_to_gif(
-        input_path="/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/movies/exposure_time_series_all_2025-03-16-19-00-00_2025-03-16-21-15-00.mp4",
-        output_path="/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/movies/exposure_time_series_all_2025-03-16-19-00-00_2025-03-16-21-15-00.gif",
+        input_path="/home/cephandrius/Desktop/git/Lexi-BU/lexi_data_analysis/movies/exposure_time_series_all_2025-03-16-19-00-00_2025-03-16-21-15-00.mp4",
+        output_path="/home/cephandrius/Desktop/git/Lexi-BU/lexi_data_analysis/movies/exposure_time_series_all_2025-03-16-19-00-00_2025-03-16-21-15-00.gif",
     )

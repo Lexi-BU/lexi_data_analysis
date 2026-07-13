@@ -14,7 +14,7 @@ from spacepy.pycdf import CDF as cdf
 # importlib.reload(lexi_functions)
 
 """
-data_folder_location = "/mnt/cephadrius/bu_research/lexi_data/L1b/hk/cdf/"
+data_folder_location = "/mnt/cephandrius/bu_research/lexi_data/L1b/hk/cdf/"
 start_time = "2025-01-16T00:00:00Z"
 end_time = "2025-03-17T00:00:00Z"
 

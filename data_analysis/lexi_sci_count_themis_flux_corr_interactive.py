@@ -35,7 +35,7 @@ themis_flux = {sc: load_and_process_themis_flux(sc, date_range) for sc in sc_lis
 
 # Load Lexi counts
 lexi_counts_df = pd.read_csv(
-    "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_pipeline/data/counts_per_second.csv"
+    "/home/cephandrius/Desktop/git/Lexi-BU/lexi_data_pipeline/data/counts_per_second.csv"
 )
 lexi_counts_df.rename(columns={lexi_counts_df.columns[0]: "epoch"}, inplace=True)
 lexi_counts_df.set_index("epoch", inplace=True)

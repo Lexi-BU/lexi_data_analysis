@@ -870,9 +870,9 @@ for key in keys_to_add:
 # Example
 time_res = "1min"
 all_l2_files = sorted(
-    # glob.glob(f"/mnt/cephadrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf")
+    # glob.glob(f"/mnt/cephandrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf")
     glob.glob(
-        "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/data/1min/clps-bgm1_lexi_l2-images*.cdf"
+        "/home/cephandrius/Desktop/git/Lexi-BU/lexi_data_analysis/data/1min/clps-bgm1_lexi_l2-images*.cdf"
     )
 )
 l2_files = keep_highest_versions(all_l2_files)
@@ -1067,7 +1067,7 @@ for k in range(len(edges) - 1):
 
 
     # Save the combined profile dataframe to a csv file
-    combined_profile_df.to_csv(f"/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/data/line_profile_data/bg_corrected/from_l2/combined_profile_df_{win_start.strftime('%Y%m%d_%H%M%S')}_{win_end.strftime('%Y%m%d_%H%M%S')}.csv")
+    combined_profile_df.to_csv(f"/home/cephandrius/Desktop/git/Lexi-BU/lexi_data_analysis/data/line_profile_data/bg_corrected/from_l2/combined_profile_df_{win_start.strftime('%Y%m%d_%H%M%S')}_{win_end.strftime('%Y%m%d_%H%M%S')}.csv")
 
     # Cosmetic overlays + tick formatting (same as your original)
     for ax in axs.flatten()[:3]:

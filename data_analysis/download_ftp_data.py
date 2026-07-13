@@ -17,7 +17,7 @@ def ceil_to_hour(dt):
 
 
 def download_lexi_data(
-    start_time, end_time, data_level="L1b", local_dir=Path("/home/cephadrius/Downloads/")
+    start_time, end_time, data_level="L1b", local_dir=Path("/home/cephandrius/Downloads/")
 ):
     """
     Downloads only the latest version of LEXI data files from FTPS server between given UTC start and end times,

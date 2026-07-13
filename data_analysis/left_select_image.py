@@ -10,7 +10,7 @@ version_number = "v0.1"  # Change this to your version number
 delta_time = 5  # Change this to your delta time in minutes
 # Set your image folder and output path
 input_folder = Path(
-    f"/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/figures/line_profiles/el_az_{version_number}/{delta_time}min/"
+    f"/home/cephandrius/Desktop/git/Lexi-BU/lexi_data_analysis/figures/line_profiles/el_az_{version_number}/{delta_time}min/"
 )
 
 image_extension = "*.png"  # Change if needed, e.g., "*.jpg"

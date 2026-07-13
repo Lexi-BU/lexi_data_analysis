@@ -22,7 +22,7 @@ file_name = f"line_profile_fit_parameters_bg_corrected_{time_res}_flux_avg_.csv"
 data_path = data_folder / file_name
 
 # L2 file pattern (same style as used to generate the CSV)
-L2_GLOB = f"/mnt/cephadrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf"
+L2_GLOB = f"/mnt/cephandrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf"
 
 # Color/limits for line profiles
 LINE_X_MIN = 0.0

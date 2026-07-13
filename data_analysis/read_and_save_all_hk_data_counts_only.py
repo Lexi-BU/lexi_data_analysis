@@ -15,7 +15,7 @@ from spacepy.pycdf import CDF as cdf
 # importlib.reload(lexi_functions)
 
 """
-data_folder_location = "/mnt/cephadrius/bu_research/lexi_data/L1b/hk/cdf/"
+data_folder_location = "/mnt/cephandrius/bu_research/lexi_data/L1b/hk/cdf/"
 start_time = "2025-01-16T00:00:00Z"
 end_time = "2025-03-17T00:00:00Z"
 
@@ -325,7 +325,7 @@ for plot_start_time, plot_end_time in zip(plot_start_time_list, plot_end_time_li
     )
 
     counts_per_second_file = (
-        "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_pipeline/data/counts_per_second.csv"
+        "/home/cephandrius/Desktop/git/Lexi-BU/lexi_data_pipeline/data/counts_per_second.csv"
     )
     df_counts = pd.read_csv(counts_per_second_file, index_col=0, parse_dates=True)
     df_counts = df_counts.loc[plot_start_time:plot_end_time]

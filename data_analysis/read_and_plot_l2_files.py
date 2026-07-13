@@ -128,7 +128,7 @@ def plot_on_ra_dec(
     ax.set_title(title)
 
     spc_df = pd.read_csv(
-        "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_pipeline/data/pointing/lexi_look_direction_data_resampled_interpolated_2025-03-02_00-00-00_to_2025-03-16_23-59-59_v0.0.csv"
+        "/home/cephandrius/Desktop/git/Lexi-BU/lexi_data_pipeline/data/pointing/lexi_look_direction_data_resampled_interpolated_2025-03-02_00-00-00_to_2025-03-16_23-59-59_v0.0.csv"
     )
     spc_df["RA"] = spc_df["ra_lexi"]
     spc_df["DEC"] = spc_df["dec_lexi"]
@@ -469,9 +469,9 @@ for key in keys_to_add:
 # Example
 time_res = "105min_singular"
 all_l2_files = sorted(
-    # glob.glob(f"/mnt/cephadrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf")
+    # glob.glob(f"/mnt/cephandrius/bu_research/lexi_data/l2/{time_res}/clps-bgm1_lexi_l2-images*.cdf")
     glob.glob(
-        "/home/cephadrius/Desktop/git/Lexi-BU/lexi_data_analysis/data/105min/clps-bgm1_lexi_l2-images*.cdf"
+        "/home/cephandrius/Desktop/git/Lexi-BU/lexi_data_analysis/data/105min/clps-bgm1_lexi_l2-images*.cdf"
     )
 )
 l2_files = keep_highest_versions(all_l2_files)

@@ -447,11 +447,11 @@ def main():
     ax2 = fig.add_subplot(gs[1, 0], sharex=ax1)
     ax2.scatter(
         lexi_df.index, lexi_df["all_counts_rolling"],
-        s=40, alpha=0.9, color="#00FF7F", edgecolors="white",
+        s=100, alpha=0.8, color="#00FF7F", edgecolors="white",
         linewidths=0.3, label="LEXI Counts/s (Original)",
     )
     # ax2.set_ylim(2000, 3400)
-    ax2.set_ylim(100, 1000)
+    ax2.set_ylim(200, 600)
     ax2.set_ylabel("LEXI Counts/s", fontsize=10)
     ax2.legend(loc="upper right")
     ax2.grid(True, alpha=0.2)
@@ -476,7 +476,7 @@ def main():
     cax3.xaxis.set_ticks_position("top")
     cax3.xaxis.set_label_position("top")
     # ax3.set_ylim(2000, 3400)
-    ax3.set_ylim(100, 1000)
+    ax3.set_ylim(200, 600)
     ax3.set_ylabel("LEXI Counts/s\n(Time-aligned)", fontsize=10)
     # ax3.legend(loc="upper right")
     ax3.grid(True, alpha=0.2)

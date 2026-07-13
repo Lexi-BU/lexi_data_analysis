@@ -370,7 +370,7 @@ if __name__ == "__main__":
                 start_time = f"2025-{month:02d}-{day:02d}T14:00:00Z"
                 end_time = f"2025-{month:02d}-{day:02d}T18:59:59Z"
                 input_data = {
-                    "data_folder_location": "/mnt/cephadrius/bu_research/lexi_data/L1b/sci/cdf/",
+                    "data_folder_location": "/mnt/cephandrius/bu_research/lexi_data/L1b/sci/cdf/",
                     "start_time": start_time,
                     "end_time": end_time,
                 }
@@ -399,7 +399,7 @@ if __name__ == "__main__":
 start_time = f"2025-03-06T14:42:00Z"
 end_time = f"2025-03-06T15:14:00Z"
 input_data = {
-    "data_folder_location": "/mnt/cephadrius/bu_research/lexi_data/L1b/sci/cdf/",
+    "data_folder_location": "/mnt/cephandrius/bu_research/lexi_data/L1b/sci/cdf/",
     "start_time": start_time,
     "end_time": end_time,
 }
