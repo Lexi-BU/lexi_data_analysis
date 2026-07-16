@@ -189,7 +189,7 @@ def plot_on_az_el(
     ax.set_aspect("auto", adjustable="box")
 
     # ---- Custom colorbar tick formatting ----
-    cbar = plt.colorbar(pm, ax=ax, orientation="vertical", fraction=0.046, pad=-0.075)
+    cbar = plt.colorbar(pm, ax=ax, orientation="vertical", fraction=0.046, pad=0.0)
 
     # Force scientific notation with shared exponent
     # Get the colorbar limits
@@ -361,10 +361,12 @@ def elevation_profile_normalized(ELcorn: np.ndarray, H: np.ndarray):
     # Normalized profile
     with np.errstate(divide="ignore", invalid="ignore"):
         norm_profile = np.where(row_counts > 0, row_sum / row_counts, np.nan)
+        row_std = np.nanstd(H, axis=1)
+        norm_profile_err = np.where(row_counts > 0, row_std / np.sqrt(row_counts), np.nan)
 
     # Get the total counts in the histogram (ignoring NaNs)
     total_counts = np.nansum(H)
-    return elev_row_mean, norm_profile, row_sum, row_counts, total_counts
+    return elev_row_mean, norm_profile, row_sum, row_counts, total_counts, norm_profile_err
 
 
 def plot_line_profile(
@@ -381,6 +383,8 @@ def plot_line_profile(
     ylim=None,
     logy=False,
     key=None,
+    xticks=None,
+    yticks=None,
 ):
     """
     Starting from the bottom of the plot and going up, at each y-bin, find the sum of histogram
@@ -388,11 +392,12 @@ def plot_line_profile(
     """
     # Set anything less than zero to NaN
     input_histogram = np.where(input_histogram <= 0, np.nan, input_histogram)
-    elev_row_mean, norm_profile, row_sum, row_counts, total_counts = elevation_profile_normalized(
+    elev_row_mean, norm_profile, row_sum, row_counts, total_counts, norm_profile_err = elevation_profile_normalized(
         elevation_corners, input_histogram
     )
     el_centers = elev_row_mean
     profile = norm_profile
+    profile_err = norm_profile_err
     if profile is None or np.all(np.isnan(profile)):
         return ax, data_df
 
@@ -435,7 +440,18 @@ def plot_line_profile(
     #     horizontalalignment="right",
     #     bbox=dict(facecolor="w", alpha=0.5),
     # )
-    ax.scatter(profile, el_centers, color="magenta", s=10, marker=".")
+    ax.errorbar(
+        profile,
+        el_centers,
+        xerr=profile_err,
+        fmt="o",
+        color="magenta",
+        markersize=4,
+        ecolor="magenta",
+        elinewidth=0.8,
+        capsize=2,
+        zorder=3,
+    )
 
     ax.set_title(title)
     # Make vertical orange line at the minimum and maximum profile values
@@ -457,8 +473,20 @@ def plot_line_profile(
     # Turn off the grid
     ax.grid(False)
 
-    # Set the tick label font size
-    ax.tick_params(axis="both", which="both", labelsize=1.8 * mpl.rcParams["font.size"])
+    # Set the tick label font size and make ticks point inside
+    ax.tick_params(
+        axis="both",
+        which="both",
+        direction="out",  # Pointing outward
+        bottom=True,     # Force ticks to be drawn (whitegrid hides them)
+        top=False,    # Optional: draw on top as well
+        left=True,       # Force y-ticks to be drawn
+        right=False,      # Optional: draw on right as well
+        labelsize=1.8 * mpl.rcParams["font.size"],
+        color="k",
+        length=6,
+        width=1.5,
+    )
 
     # Apply same tick formatting style as colorbar (scientific notation with shared exponent)
     x_min, x_max = ax.get_xlim()
@@ -474,6 +502,12 @@ def plot_line_profile(
     ax.set_xlabel(xlabel, fontsize=1.2 * mpl.rcParams["font.size"])
 
     ax.set_ylabel(ylabel if ylabel else "Elevation [deg]", fontsize=1.2 * mpl.rcParams["font.size"])
+
+    # Set exact tick locations if provided
+    if xticks is not None:
+        ax.set_xticks(xticks)
+    if yticks is not None:
+        ax.set_yticks(yticks)
 
     # Update the data_df with new columns (if the columns don't already exist)
     if key:
@@ -756,91 +790,9 @@ def plot_integrated_map_with_marginals_seaborn(
 
     ax_joint.set_xlabel("Azimuth [deg]", fontsize=2.6 * mpl.rcParams["font.size"])
     ax_joint.set_ylabel("Elevation [deg]", fontsize=2.6 * mpl.rcParams["font.size"])
-
     if title:
         ax_joint.set_title(title, pad=8)
-
-    # ---- marginals (scatter) ----
-    # top: az_marg vs az_centers
-    # sns.scatterplot(x=az_centers, y=az_marg, s=scatter_size, ax=ax_top)
-
-    # ax_top.grid(True, alpha=0.3)
-    # # Set the y-axis limits to match the joint plot
-    # ax_top.set_ylim(0.008, 0.02)
-    # # Explicitly set x-axis limits to match ax_joint
-    # ax_top.set_xlim(az_min, az_max)
-    # plt.setp(ax_top.get_xticklabels(), visible=False)  # sharex with joint; hide x labels on top
-
-    # right: el_marg vs el_centers (horizontal scatter)
-    # sns.scatterplot(y=el_centers, x=el_marg, s=scatter_size, ax=ax_right)
-    # ax_right.grid(True, alpha=0.3)
-    # # Set the x-axis limits to match the joint plot
-    # ax_right.set_xlim(0.005, 0.017)
-    # # plt.setp(ax_right.get_yticklabels(), visible=False)  # sharey with joint; hide y labels on right
-
-    # # tidy ticks
-    # # ax_top.tick_params(labelsize=0.9 * mpl.rcParams["font.size"])
-    # # ax_right.tick_params(labelsize=0.9 * mpl.rcParams["font.size"])
-    # ax_joint.tick_params(labelsize=1.8 * mpl.rcParams["font.size"])
-
-    # # Hide all the spines of ax_top and ax_right
-    # for spine in ax_top.spines.values():
-    #     spine.set_visible(False)
-    # for spine in ax_right.spines.values():
-    #     spine.set_visible(False)
-    # # Hide the ticks and labels for top and right axes
-    # ax_top.tick_params(
-    #     axis="both",
-    #     which="both",
-    #     bottom=False,
-    #     top=False,
-    #     left=False,
-    #     right=False,
-    #     labelbottom=False,
-    #     labelleft=False,
-    #     labeltop=False,
-    #     labelright=False,
-    # )
-    # ax_right.tick_params(
-    #     axis="both",
-    #     which="both",
-    #     bottom=False,
-    #     top=False,
-    #     left=False,
-    #     right=False,
-    #     labelbottom=False,
-    #     labelleft=False,
-    #     labeltop=False,
-    #     labelright=False,
-    # )
-
-    # Apply same tick formatting style as colorbar (scientific notation with shared exponent)
-    # For ax_top (y-axis)
-    # y_min_top, y_max_top = ax_top.get_ylim()
-    # magnitude_top = int(np.floor(np.log10(max(abs(y_min_top), abs(y_max_top)))))
-    # scale_factor_top = 10**magnitude_top
-
-    # def format_func_top(x, pos):
-    #     return f"{x / scale_factor_top:.1f}"
-
-    # ax_top.yaxis.set_major_formatter(FuncFormatter(format_func_top))
-    # ylab_top = ylab_top + rf"[$\times 10^{{{magnitude_top}}}$]"
-    # ax_top.set_ylabel(ylab_top, fontsize=0.7 * mpl.rcParams["font.size"])
-
-    # # For ax_right (x-axis)
-    # x_min_right, x_max_right = ax_right.get_xlim()
-    # magnitude_right = int(np.floor(np.log10(max(abs(x_min_right), abs(x_max_right)))))
-    # scale_factor_right = 10**magnitude_right
-
-    # def format_func_right(x, pos):
-    #     return f"{x / scale_factor_right:.1f}"
-
-    # ax_right.xaxis.set_major_formatter(FuncFormatter(format_func_right))
-
-    # xlab_right = xlab_right + rf"[$\times 10^{{{magnitude_right}}}$]"
-    # ax_right.set_xlabel(xlab_right, fontsize=0.7 * mpl.rcParams["font.size"])
-
-    return fig, (ax_joint)  # , ax_top, ax_right)
+    return fig, (ax_joint)
 
 
 warnings.filterwarnings("ignore")
@@ -902,8 +854,8 @@ norm_lexi = "linear"
 v_min_lexi = 1e-5
 v_max_lexi = 6e-4
 
-line_x_min = 1.8e-4
-line_x_max = 4e-4
+line_x_min = 1.4e-4
+line_x_max = 4.5e-4
 
 # Build a table of files with their time coverage
 meta = read_l2_metadata_and_paths(l2_files)
@@ -960,99 +912,91 @@ for k in range(len(edges) - 1):
     # Bookkeeping row for this integrated window
     data_df.loc[len(data_df)] = {"start_time": win_start, "end_time": win_end}
 
-    # ---- Plot the 3 top + 3 bottom subplots for this integrated window ----
-    fig, axs = plt.subplots(2, 2, figsize=(14, 12), constrained_layout=True)
-    fig.subplots_adjust(hspace=0.0, wspace=0.0)
+    # ---- Plot the 1 row 2 col subplots for background corrected only ----
+    fig, axs = plt.subplots(1, 2, figsize=(16, 7), constrained_layout=True)
+    # fig.subplots_adjust(hspace=0.0, wspace=0.0) # Removed for 1x2 as constrained_layout handles it well
 
-    # fig.suptitle(
-    # f"LEXI L2 integrated image  |  {win_start.strftime('%Y-%m-%d %H:%M:%S')}-{win_end.strftime('%H:%M:%S')} UTC",
-    # fontsize=1.2 * mpl.rcParams["font.size"],
-    # )
     time_range = [win_start, win_end]  # for annotation only
 
-    # --- Top row: integrated maps ---
+    # --- Left: integrated map ---
     plot_on_az_el(
-        axs[0, 0],
-        AZcorn,
-        ELcorn,
-        sum_raw,
-        time_range=time_range,
-        # title="Raw Counts",
-        cbar_title="Counts [s$^{-1}$ arcmin$^{-2}$]",
-        norm=norm_lexi,
-        vmin=v_min_lexi,
-        vmax=v_max_lexi,
-    )
-    plot_on_az_el(
-        axs[0, 1],
+        axs[0],
         AZcorn,
         ELcorn,
         sum_bg,
         time_range=time_range,
-        # title="Background-Corrected Counts",
         cbar_title="Counts [s$^{-1}$ arcmin$^{-2}$]",
         norm=norm_lexi,
         vmin=v_min_lexi,
         vmax=v_max_lexi,
     )
-    # --- Bottom row: integrated line profiles ---
+    
+    # --- Right: integrated line profile ---
     x_lim = (line_x_min, line_x_max)
-    # x_lim = None
     _, data_df = plot_line_profile(
         data_df,
-        axs[1, 0],
-        sum_raw,
-        AZcorn,
-        ELcorn,
-        integration_seconds=integration_seconds,
-        # title="Line Profile",
-        xlabel="Counts [s$^{-1}$ arcmin$^{-2}$]",
-        xlim=x_lim,
-        ylim=(20, 29.5),
-        key="raw_counts",
-    )
-    _, data_df = plot_line_profile(
-        data_df,
-        axs[1, 1],
+        axs[1],
         sum_bg,
         AZcorn,
         ELcorn,
         integration_seconds=integration_seconds,
-        # title="Line Profile",
         xlabel="Counts [s$^{-1}$ arcmin$^{-2}$]",
         xlim=x_lim,
         ylim=(20, 29.5),
         key="background_corrected",
+        xticks=[2e-4, 3e-4, 4e-4],  # Exact x-axis tick locations
+        yticks=[22, 24, 26, 28],    # Exact y-axis tick locations
     )
 
-    # Cosmetic overlays + tick formatting (same as your original)
-    for ax in axs.flatten()[:2]:
-        ax.contour(AZcorn[:-1, :-1], ELcorn[:-1, :-1], az_c, colors="c", linewidths=0.6, alpha=0.5)
-        ax.contour(AZcorn[:-1, :-1], ELcorn[:-1, :-1], el_c, colors="k", linewidths=0.6, alpha=0.5)
-        ax.set_aspect("equal")
-        ax.tick_params(axis="both", which="major", labelsize=1 * mpl.rcParams["font.size"])
-        ax.tick_params(axis="both", which="minor", labelsize=1 * mpl.rcParams["font.size"])
-        ax.xaxis.get_offset_text().set(size=1 * mpl.rcParams["font.size"])
-        ax.yaxis.get_offset_text().set(size=1 * mpl.rcParams["font.size"])
-        ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
-        ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+    # Cosmetic overlays + tick formatting for the map
+    axs[0].contour(AZcorn[:-1, :-1], ELcorn[:-1, :-1], az_c, colors="c", linewidths=0.6, alpha=0.5)
+    axs[0].contour(AZcorn[:-1, :-1], ELcorn[:-1, :-1], el_c, colors="k", linewidths=0.6, alpha=0.5)
+    axs[0].set_aspect("equal")
+    axs[0].tick_params(axis="both", which="major", labelsize=1 * mpl.rcParams["font.size"])
+    axs[0].tick_params(axis="both", which="minor", labelsize=1 * mpl.rcParams["font.size"])
+    axs[0].xaxis.get_offset_text().set(size=1 * mpl.rcParams["font.size"])
+    axs[0].yaxis.get_offset_text().set(size=1 * mpl.rcParams["font.size"])
+    axs[0].xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+    axs[0].yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
 
-    for ax in axs.flatten()[2:]:
-        ax.tick_params(axis="both", which="major", labelsize=1 * mpl.rcParams["font.size"])
-        ax.tick_params(axis="both", which="minor", labelsize=1 * mpl.rcParams["font.size"])
-        ax.xaxis.get_offset_text().set(size=1 * mpl.rcParams["font.size"])
-        ax.yaxis.get_offset_text().set(size=1 * mpl.rcParams["font.size"])
-        # ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
-        # ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+    # Tick formatting for the profile
+    axs[1].tick_params(axis="both", which="major", labelsize=1 * mpl.rcParams["font.size"])
+    axs[1].tick_params(axis="both", which="minor", labelsize=1 * mpl.rcParams["font.size"])
+    axs[1].xaxis.get_offset_text().set(size=1 * mpl.rcParams["font.size"])
+    axs[1].yaxis.get_offset_text().set(size=1 * mpl.rcParams["font.size"])
+
+    # Add date and time annotations inside the plots
+    time_str = f"{win_start.strftime('%Y %b %d, %H:%M')}-{win_end.strftime('%H:%M')} UTC"
+    
+    # Left aligned for the left plot
+    axs[0].text(
+        0.03, 0.97, time_str, 
+        transform=axs[0].transAxes, 
+        verticalalignment="top", 
+        horizontalalignment="left", 
+        fontsize=0.85 * mpl.rcParams["font.size"],
+        color="black",
+        bbox=dict(facecolor="white", alpha=0.6, edgecolor="none", pad=2)
+    )
+    
+    # Right aligned for the right plot
+    axs[1].text(
+        0.97, 0.97, time_str, 
+        transform=axs[1].transAxes, 
+        verticalalignment="top", 
+        horizontalalignment="right", 
+        fontsize=0.85 * mpl.rcParams["font.size"],
+        color="black",
+        bbox=dict(facecolor="white", alpha=0.6, edgecolor="none", pad=2)
+    )
 
     # Save figure per integrated window
     outdir = Path(
-        f"../figures/line_profiles/bg_corrected/from_l2/no_flat/az_el_integrated_{integration}/"
+        f"../figures/line_profiles/bg_corrected/from_l2/no_flat/az_el_integrated_{integration}/bg_only/"
     )
-    # outdir = Path("/home/cephandrius/Desktop/git/overleaf_projects/lexi_draft/figures/")
     outdir.mkdir(parents=True, exist_ok=True)
     fig_name = (
-        f"lexi_l2_integrated_{win_start.strftime('%Y%m%d_%H%M%S')}_{win_end.strftime('%H%M%S')}"
+        f"lexi_l2_integrated_bg_only_{win_start.strftime('%Y%m%d_%H%M%S')}_{win_end.strftime('%H%M%S')}"
     )
     fig.savefig(
         outdir / f"{fig_name}.{fig_format}",
@@ -1062,83 +1006,3 @@ for k in range(len(edges) - 1):
         format=fig_format,
     )
     plt.close(fig)
-
-    sums = {"sum_raw": sum_raw, "sum_bg": sum_bg}
-    # hist_choice = "sum_raw"  # or "sum_raw" / "sum_bgff"
-
-    for hist_choice in ["sum_raw", "sum_bg"]:
-
-        # fig2, ax2 = plt.subplots(1, 1, figsize=(7, 6), constrained_layout=True)
-        # plot_selected_integrated_hist(
-        #     ax2,
-        #     AZcorn,
-        #     ELcorn,
-        #     hist_choice,
-        #     sums,
-        #     time_range=[win_start, win_end],
-        #     norm=norm_lexi,
-        #     vmin=v_min_lexi,
-        #     vmax=v_max_lexi,
-        #     cbar_title="Counts",
-        # )
-        # fig2.savefig(
-        #     outdir
-        #     / f"histmap_{hist_choice}_{win_start.strftime('%Y%m%d_%H%M%S')}_{win_end.strftime('%H%M%S')}.png",
-        #     dpi=200,
-        # )
-        # plt.close(fig2)
-
-        # title = (
-        #     f"{hist_choice} | "
-        #     f"{win_start.strftime('%Y-%m-%d %H:%M:%S')}–{win_end.strftime('%H:%M:%S')} UTC"
-        # )
-
-        # g = plot_selected_integrated_hist_with_marginals(
-        #     AZcorn,
-        #     ELcorn,
-        #     sums[hist_choice],
-        #     title=title,
-        #     cmap="mako",  # any seaborn/mpl cmap
-        #     log_color=False,  # set True if dynamic range is huge
-        #     cbar_label="Counts",  # integrated counts
-        #     height=8,
-        #     ratio=4,
-        #     linewidth=1.6,
-        # )
-
-        # outdir = Path(
-        #     f"../figures/line_profiles/bg_corrected/from_l2/no_flat/az_el_integrated_{integration}/histmaps_with_marginals/"
-        # )
-        # outdir.mkdir(parents=True, exist_ok=True)
-        # fname = f"{hist_choice}_{win_start.strftime('%Y%m%d_%H%M%S')}.png"
-        # g.fig.savefig(outdir / fname, dpi=200, bbox_inches="tight")
-        # plt.close(g.fig)
-
-        figsize_exact = (10, 9)
-
-        # title = f"{hist_choice} | {win_start:%Y-%m-%d %H:%M:%S}-{win_end:%H:%M:%S} UTC"
-        fig, _ = plot_integrated_map_with_marginals_seaborn(
-            AZcorn,
-            ELcorn,
-            az_c,
-            el_c,
-            sums[hist_choice],
-            figsize=figsize_exact,
-            # title=title,
-            cmap="plasma",
-            log_color=False,
-            cbar_label="Counts [s$^{-1}$ arcmin$^{-2}$]",
-            joint_ratio=7,
-            scatter_size=10,
-            normalize_marginals=False,
-            cbar_lims=(v_min_lexi, v_max_lexi),
-        )
-
-        # outdir = Path(
-        #     f"../figures/line_profiles/bg_corrected/from_l2/no_flat/az_el_integrated_{integration}/histmaps_with_marginals/"
-        # )
-        outdir = Path("/home/cephandrius/Desktop/git/overleaf_projects/lexi_draft/figures/")
-        outdir.mkdir(parents=True, exist_ok=True)
-        fname = f"{hist_choice}_normalized_{win_start.strftime('%Y%m%d_%H%M%S')}_{win_end.strftime('%H%M%S')}.{fig_format}"
-        fig.savefig(outdir / fname, dpi=200, bbox_inches="tight")
-        plt.close(fig)
